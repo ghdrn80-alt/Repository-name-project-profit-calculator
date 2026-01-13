@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(del /f \"C:\\\\Users\\\\snoop\\\\project-profit-calculator\\\\src\\\\components\\\\LaborCostForm.tsx\" \"C:\\\\Users\\\\snoop\\\\project-profit-calculator\\\\src\\\\components\\\\MaterialCostForm.tsx\" \"C:\\\\Users\\\\snoop\\\\project-profit-calculator\\\\src\\\\components\\\\OtherCostForm.tsx\")",
+      "Bash(npx tsc:*)",
+      "Bash(npm run electron:dev:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(timeout:*)",
+      "Bash(taskkill //F //PID 33808)",
+      "Bash(taskkill //F //PID 37064)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm install:*)",
+      "Bash(node -e:*)"
+    ]
+  }
+}
