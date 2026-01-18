@@ -11,6 +11,12 @@ function ProjectInfoForm({ data, onChange }: Props) {
     onChange({ ...data, [field]: value })
   }
 
+  // 네고 금액 계산
+  const originalEstimate = data.originalEstimate ?? 0
+  const contractAmount = data.contractAmount ?? 0
+  const negotiationAmount = contractAmount - originalEstimate
+  const negotiationRate = originalEstimate > 0 ? (negotiationAmount / originalEstimate) * 100 : 0
+
   return (
     <section className="form-section">
       <h2>프로젝트 정보</h2>
@@ -31,6 +37,14 @@ function ProjectInfoForm({ data, onChange }: Props) {
             value={data.clientName ?? ''}
             onChange={(e) => handleChange('clientName', e.target.value)}
             placeholder="고객사명 입력"
+          />
+        </div>
+        <div className="form-group">
+          <label>원가 견적가 (원)</label>
+          <NumberInput
+            value={data.originalEstimate ?? 0}
+            onChange={(val) => handleChange('originalEstimate', val)}
+            placeholder="0"
           />
         </div>
         <div className="form-group">
@@ -65,6 +79,19 @@ function ProjectInfoForm({ data, onChange }: Props) {
           </div>
         </div>
       </div>
+
+      {/* 네고 금액 표시 */}
+      {originalEstimate > 0 && (
+        <div className="negotiation-summary">
+          <div className={`negotiation-item ${negotiationAmount < 0 ? 'discount' : negotiationAmount > 0 ? 'increase' : ''}`}>
+            <span className="negotiation-label">네고 금액</span>
+            <span className="negotiation-value">
+              {negotiationAmount >= 0 ? '+' : ''}{negotiationAmount.toLocaleString()}원
+              ({negotiationRate >= 0 ? '+' : ''}{negotiationRate.toFixed(1)}%)
+            </span>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

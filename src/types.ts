@@ -2,17 +2,10 @@
 export interface ProjectInfo {
   projectName: string
   clientName: string
-  contractAmount: number
+  originalEstimate: number    // 원가 견적가 (원래 견적)
+  contractAmount: number      // 계약금액 (네고 후)
   totalPersonnel: number      // 총 투입 인원
   estimatedManHours: number   // 예상 공수 (M/H)
-}
-
-// 전장설계비 (인건비/설계 시수)
-export interface DesignCost {
-  id: string
-  personName: string
-  hours: number
-  hourlyRate: number
 }
 
 // 전기 자재비 (PLC, 감지기, 차단기, 케이블 등)
@@ -24,36 +17,11 @@ export interface ElectricalMaterial {
   unitPrice: number
 }
 
-// 판넬 제작비 (작업자별 시수 x 시급)
-export interface PanelCostItem {
-  id: string
-  workType: string      // 작업 유형 (가공, 조립, 배선, 마킹, 검수 등)
-  personName: string    // 작업자명
-  hours: number         // 시수
-  hourlyRate: number    // 시급
-}
-
-// 기체 배선 작업비 (현장 작업 시수)
-export interface WiringCost {
-  id: string
-  personName: string
-  hours: number
-  hourlyRate: number
-}
-
 // 출장 경비
 export interface TravelExpense {
   accommodationCost: number   // 숙박비
   mealCost: number           // 식비
   transportCost: number      // 교통비
-}
-
-// 시운전 및 셋업 비용
-export interface SetupCost {
-  id: string
-  description: string
-  hours: number
-  hourlyRate: number
 }
 
 // 외주 가공비
@@ -77,6 +45,39 @@ export interface ConsumableCost {
   amount: number
 }
 
+// 전장설계비 (레거시 호환용)
+export interface DesignCost {
+  id: string
+  personName: string
+  hours: number
+  hourlyRate: number
+}
+
+// 판넬 제작비 (레거시 호환용)
+export interface PanelCostItem {
+  id: string
+  workType?: string
+  personName?: string
+  hours?: number
+  hourlyRate?: number
+}
+
+// 기체 배선비 (레거시 호환용)
+export interface WiringCost {
+  id: string
+  personName: string
+  hours: number
+  hourlyRate: number
+}
+
+// 시운전/셋업 비용 (레거시 호환용)
+export interface SetupCost {
+  id: string
+  description: string
+  hours: number
+  hourlyRate: number
+}
+
 // 간접비 및 기타
 export interface OverheadAndMargin {
   overheadRate: number       // 공통 관리비율 (%) - 임대료, 전기료, 사무실 운영비 분담
@@ -84,19 +85,21 @@ export interface OverheadAndMargin {
   marginRate: number         // 목표 마진율 (%)
 }
 
-// 견적 배분 (계약금액을 항목별로 배분)
+// 견적 배분 (계약금액을 항목별로 배분, 단위: 원)
 export interface BudgetAllocation {
-  designCost: number          // 전장설계비 배분
+  // 인건비 항목별 배분 (원)
+  laborDesign: number         // 인건비 - 설계
+  laborPanel: number          // 인건비 - 판넬
+  laborWiring: number         // 인건비 - 배선
+  laborSetup: number          // 인건비 - 셋업
+  laborOther: number          // 인건비 - 기타
+  // 기타 비용 배분 (원)
   electricalMaterial: number  // 전기 자재비 배분
-  panelCost: number           // 판넬 제작비 배분
-  wiringCost: number          // 기체 배선비 배분
   travelExpense: number       // 출장 경비 배분
-  setupCost: number           // 시운전/셋업 배분
   outsourcingCost: number     // 외주 가공비 배분
   deliveryCost: number        // 운반/포장비 배분
   consumableCost: number      // 소모품비 배분
   overhead: number            // 간접비 배분
-  manHourCost: number         // 공수 인건비 배분
 }
 
 // 공수 비용 항목 카테고리
@@ -107,25 +110,57 @@ export type ManHourCostCategory =
   | 'setup'       // 시운전/셋업
   | 'other'       // 기타 (별도 집계)
 
+// 직원 마스터 데이터
+export interface EmployeeMaster {
+  id: string
+  personName: string        // 이름
+  rank: string              // 직급
+  monthlySalary: number     // 월급여
+  workingDaysPerMonth: number  // 월 근무일수 (기본 22)
+  overheadRate: number      // 간접비율 (%, 기본 15)
+  hoursPerDay: number       // 1일 기준 시간 (기본 8)
+}
+
 // 일별 공수 데이터 (월별로 31일치 배열)
 export type DailyManDays = number[]  // 인덱스 0 = 1일, 최대 31개
 
-// 공수표 작업자 데이터 (엑셀 임포트용)
-export interface ManHourWorker {
+// 내부 인원 데이터 (월급여 기반 계산)
+export interface InternalWorker {
   id: string
   personName: string        // 작업자 이름
-  company: string           // 소속
   rank: string              // 직급
-  dailyRate: number         // 일당 단가
-  totalManDays: number      // 총 공수 (M/D)
+  monthlySalary: number     // 월급여
+  workingDaysPerMonth: number  // 월 근무일수 (기본 22일)
+  overheadRate: number      // 간접비율 (%, 기본 15%)
+  hoursPerDay: number       // 1일 기준 시간 (기본 8시간)
+  projectHours: number      // 이 프로젝트 투입 시간
+  costCategory: ManHourCostCategory  // 비용 항목
+  employeeId?: string       // 마스터 직원 ID (선택된 경우)
+  manualDailyRate?: number  // 직접 입력 일당 (직접입력 모드용)
+}
+
+// 외부 인원 (외주) 데이터 - 공수표용 (엑셀 임포트용)
+export interface ExternalWorker {
+  id: string
+  personName: string        // 작업자 이름
+  company: string           // 소속 (외주업체명)
+  rank: string              // 직급
+  dailyRate: number         // 일당 단가 (직접 입력)
+  totalManDays: number      // 총 공수 (M/D) - 전체 (참고용)
+  projectManDays: number    // 이 프로젝트 공수 - 비용 계산용
   monthlyManDays: number[]  // 월별 공수 합계 (1~12월)
   dailyManDaysPerMonth: DailyManDays[]  // 월별 일별 공수 (12개월 x 31일)
   costCategory: ManHourCostCategory  // 비용 항목
 }
 
+// 공수표 작업자 데이터 (기존 호환용 - deprecated)
+export interface ManHourWorker extends ExternalWorker {}
+
 // 공수 인건비 데이터
 export interface ManHourCost {
-  workers: ManHourWorker[]
+  internalWorkers: InternalWorker[]  // 내부 인원
+  externalWorkers: ExternalWorker[]  // 외부 인원 (외주)
+  workers?: ManHourWorker[]  // 기존 호환용 (deprecated)
   sourceFile?: string       // 임포트한 파일 경로
   importedAt?: string       // 임포트 일시
 }
@@ -133,18 +168,14 @@ export interface ManHourCost {
 // 전체 프로젝트 데이터
 export interface ProjectData {
   projectInfo: ProjectInfo
-  designCosts: DesignCost[]
   electricalMaterials: ElectricalMaterial[]
-  panelCosts: PanelCostItem[]
-  wiringCosts: WiringCost[]
   travelExpense: TravelExpense
-  setupCosts: SetupCost[]
   outsourcingCosts: OutsourcingCost[]
   deliveryCost: DeliveryCost
   consumableCosts: ConsumableCost[]
   overheadAndMargin: OverheadAndMargin
   budgetAllocation: BudgetAllocation
-  manHourCost: ManHourCost  // 공수 인건비 추가
+  manHourCost: ManHourCost  // 인건비 (공수 통합)
 }
 
 // 항목별 비교 데이터
@@ -158,18 +189,17 @@ export interface CostComparison {
 
 // 손익 요약
 export interface ProfitSummary {
-  totalRevenue: number
+  // 견적 비교
+  originalEstimate: number       // 원가 견적가
+  totalRevenue: number           // 계약금액 (매출)
   // 직접비
-  designCostTotal: number
+  laborCostTotal: number           // 인건비 총액 (내부 + 외부)
+  laborCostByCategory: Record<ManHourCostCategory, number>  // 항목별 인건비
   electricalMaterialTotal: number
-  panelCostTotal: number
-  wiringCostTotal: number
   travelExpenseTotal: number
-  setupCostTotal: number
   outsourcingCostTotal: number
   deliveryCostTotal: number
   consumableCostTotal: number
-  manHourCostTotal: number       // 공수 인건비 총액
   directCostSubtotal: number     // 직접비 소계
   // 간접비
   overheadCost: number           // 공통 관리비

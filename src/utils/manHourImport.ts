@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx'
-import { ManHourWorker, ManHourCost, ManHourCostCategory } from '../types'
+import { ManHourCost, ManHourCostCategory, InternalWorker, ExternalWorker } from '../types'
 
 export interface ImportResult {
   success: boolean
@@ -7,9 +7,41 @@ export interface ImportResult {
   error?: string
 }
 
-// 공수표 엑셀 파일에서 작업자 데이터 파싱
+// 내부 인원 일당 계산 (월급여 기반 또는 직접입력)
+export function calculateInternalDailyRate(worker: InternalWorker): number {
+  // 직접 입력 일당이 있으면 사용
+  if (worker.manualDailyRate && worker.manualDailyRate > 0) {
+    return worker.manualDailyRate
+  }
+  // 월급여 기반 계산
+  if (worker.workingDaysPerMonth <= 0) return 0
+  const baseDailyRate = worker.monthlySalary / worker.workingDaysPerMonth
+  const overheadMultiplier = 1 + (worker.overheadRate / 100)
+  return Math.round(baseDailyRate * overheadMultiplier)
+}
+
+// 내부 인원 시간 → M/D 변환
+export function calculateInternalManDaysFromHours(worker: InternalWorker): number {
+  const hoursPerDay = worker.hoursPerDay || 8
+  if (hoursPerDay <= 0) return 0
+  return worker.projectHours / hoursPerDay
+}
+
+// 내부 인원 비용 계산
+export function calculateInternalWorkerCost(worker: InternalWorker): number {
+  const dailyRate = calculateInternalDailyRate(worker)
+  const manDays = calculateInternalManDaysFromHours(worker)
+  return Math.round(dailyRate * manDays)
+}
+
+// 외부 인원 비용 계산 (직접 일당 적용)
+export function calculateExternalWorkerCost(worker: ExternalWorker): number {
+  return worker.dailyRate * (worker.projectManDays ?? worker.totalManDays)
+}
+
+// 공수표 엑셀 파일에서 외부 인원 데이터 파싱
 export function parseManHourExcel(workbook: XLSX.WorkBook): ManHourCost {
-  const workers: ManHourWorker[] = []
+  const externalWorkers: ExternalWorker[] = []
 
   // "작업자 목록" 시트에서 데이터 추출
   const workerListSheet = workbook.Sheets['작업자 목록']
@@ -74,20 +106,23 @@ export function parseManHourExcel(workbook: XLSX.WorkBook): ManHourCost {
     // 공수가 0인 작업자는 제외
     if (totalManDays === 0) continue
 
-    workers.push({
-      id: `mh_${Date.now()}_${i}`,
+    externalWorkers.push({
+      id: `ext_${Date.now()}_${i}`,
       personName,
       company,
       rank,
       dailyRate,
       totalManDays,
+      projectManDays: totalManDays,  // 기본값: 총 공수와 동일
       monthlyManDays,
+      dailyManDaysPerMonth: [],
       costCategory: 'wiring'  // 기본값: 기체 배선비
     })
   }
 
   return {
-    workers,
+    internalWorkers: [],
+    externalWorkers,
     importedAt: new Date().toISOString()
   }
 }
@@ -110,28 +145,49 @@ export function readExcelFile(file: File): Promise<XLSX.WorkBook> {
   })
 }
 
-// 공수 인건비 총액 계산
-export function calculateManHourTotal(manHourCost: ManHourCost): number {
-  return manHourCost.workers.reduce(
-    (sum, worker) => sum + (worker.totalManDays * worker.dailyRate),
+// 내부 인원 총 인건비 계산
+export function calculateInternalTotal(manHourCost: ManHourCost): number {
+  return (manHourCost.internalWorkers || []).reduce(
+    (sum, worker) => sum + calculateInternalWorkerCost(worker),
     0
   )
 }
 
-// 월별 인건비 계산
+// 외부 인원 총 인건비 계산
+export function calculateExternalTotal(manHourCost: ManHourCost): number {
+  return (manHourCost.externalWorkers || []).reduce(
+    (sum, worker) => sum + calculateExternalWorkerCost(worker),
+    0
+  )
+}
+
+// 공수 인건비 총액 계산 (내부 + 외부)
+export function calculateManHourTotal(manHourCost: ManHourCost): number {
+  return calculateInternalTotal(manHourCost) + calculateExternalTotal(manHourCost)
+}
+
+// 월별 인건비 계산 (외부 인원만 - 월별 데이터가 있는 경우)
 export function calculateMonthlyLaborCost(manHourCost: ManHourCost, month: number): number {
   if (month < 1 || month > 12) return 0
-  return manHourCost.workers.reduce(
-    (sum, worker) => sum + (worker.monthlyManDays[month - 1] * worker.dailyRate),
+  return (manHourCost.externalWorkers || []).reduce(
+    (sum, worker) => sum + ((worker.monthlyManDays?.[month - 1] || 0) * worker.dailyRate),
     0
   )
 }
 
 // 비용 항목별 공수 인건비 계산
 export function calculateManHourByCategory(manHourCost: ManHourCost, category: ManHourCostCategory): number {
-  return manHourCost.workers
+  // 내부 인원
+  const internalCost = (manHourCost.internalWorkers || [])
     .filter(worker => (worker.costCategory || 'wiring') === category)
-    .reduce((sum, worker) => sum + (worker.totalManDays * worker.dailyRate), 0)
+    .reduce((sum, worker) => sum + calculateInternalWorkerCost(worker), 0)
+
+  // 외부 인원
+  const externalCost = (manHourCost.externalWorkers || [])
+    .filter(worker => (worker.costCategory || 'wiring') === category)
+    .reduce((sum, worker) => sum + calculateExternalWorkerCost(worker), 0)
+
+  return internalCost + externalCost
 }
 
 // 전체 비용 항목별 공수 인건비 계산 (한번에)
@@ -144,10 +200,41 @@ export function calculateAllManHourByCategory(manHourCost: ManHourCost): Record<
     other: 0
   }
 
-  for (const worker of manHourCost.workers) {
+  // 내부 인원
+  for (const worker of (manHourCost.internalWorkers || [])) {
     const category = worker.costCategory || 'wiring'
-    result[category] += worker.totalManDays * worker.dailyRate
+    result[category] += calculateInternalWorkerCost(worker)
+  }
+
+  // 외부 인원
+  for (const worker of (manHourCost.externalWorkers || [])) {
+    const category = worker.costCategory || 'wiring'
+    result[category] += calculateExternalWorkerCost(worker)
   }
 
   return result
+}
+
+// 내부 인원 총 공수 계산 (시간 → M/D 변환)
+export function calculateInternalManDays(manHourCost: ManHourCost): number {
+  return (manHourCost.internalWorkers || []).reduce(
+    (sum, worker) => sum + calculateInternalManDaysFromHours(worker),
+    0
+  )
+}
+
+// 내부 인원 총 시간 계산
+export function calculateInternalTotalHours(manHourCost: ManHourCost): number {
+  return (manHourCost.internalWorkers || []).reduce(
+    (sum, worker) => sum + (worker.projectHours || 0),
+    0
+  )
+}
+
+// 외부 인원 총 공수 계산
+export function calculateExternalManDays(manHourCost: ManHourCost): number {
+  return (manHourCost.externalWorkers || []).reduce(
+    (sum, worker) => sum + (worker.projectManDays ?? worker.totalManDays),
+    0
+  )
 }

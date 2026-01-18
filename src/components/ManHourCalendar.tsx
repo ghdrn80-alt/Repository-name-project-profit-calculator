@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { ManHourWorker, ManHourCostCategory } from '../types'
 
 interface Props {
@@ -84,7 +84,7 @@ function ManHourCalendar({ workers, onUpdateWorkerDaily }: Props) {
   // 캘린더 그리드 생성
   const renderCalendarGrid = () => {
     const { daysInMonth, startDayOfWeek } = calendarData
-    const cells: JSX.Element[] = []
+    const cells: React.ReactElement[] = []
 
     // 빈 셀 (이전 달)
     for (let i = 0; i < startDayOfWeek; i++) {

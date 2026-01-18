@@ -98,7 +98,7 @@ function PanelCostForm({ data, onChange }: Props) {
                 </td>
                 <td>
                   <NumberInput
-                    value={item.hours}
+                    value={item.hours ?? 0}
                     onChange={(val) => updateItem(item.id, 'hours', val)}
                     placeholder="0"
                   />
@@ -108,7 +108,7 @@ function PanelCostForm({ data, onChange }: Props) {
                 </td>
                 <td>
                   <NumberInput
-                    value={item.hourlyRate}
+                    value={item.hourlyRate ?? 0}
                     onChange={(val) => updateItem(item.id, 'hourlyRate', val)}
                     onTabFromLast={index === data.length - 1 ? addItem : undefined}
                   />

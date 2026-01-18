@@ -1,12 +1,8 @@
-import { useState, useCallback } from 'react'
-import { ProjectData, ProfitSummary, CostComparison } from './types'
+import { useState, useCallback, useEffect } from 'react'
+import { ProjectData, ProfitSummary, CostComparison, EmployeeMaster } from './types'
 import ProjectInfoForm from './components/ProjectInfoForm'
-import DesignCostForm from './components/DesignCostForm'
 import ElectricalMaterialForm from './components/ElectricalMaterialForm'
-import PanelCostForm from './components/PanelCostForm'
-import WiringCostForm from './components/WiringCostForm'
 import TravelExpenseForm from './components/TravelExpenseForm'
-import SetupCostForm from './components/SetupCostForm'
 import OutsourcingCostForm from './components/OutsourcingCostForm'
 import DeliveryCostForm from './components/DeliveryCostForm'
 import ConsumableCostForm from './components/ConsumableCostForm'
@@ -15,27 +11,32 @@ import BudgetAllocationForm from './components/BudgetAllocationForm'
 import ProfitDashboard from './components/ProfitDashboard'
 import CostComparisonDashboard from './components/CostComparisonDashboard'
 import ManHourCostForm from './components/ManHourCostForm'
+import EmployeeMasterForm from './components/EmployeeMasterForm'
 import { exportToExcel } from './utils/excelExport'
 import { calculateManHourTotal, calculateAllManHourByCategory } from './utils/manHourImport'
+import {
+  loadEmployeeMaster,
+  saveEmployeeMaster,
+  addEmployee,
+  updateEmployee,
+  removeEmployee
+} from './utils/employeeMaster'
 
 const initialData: ProjectData = {
   projectInfo: {
     projectName: '',
     clientName: '',
+    originalEstimate: 0,
     contractAmount: 0,
     totalPersonnel: 0,
     estimatedManHours: 0
   },
-  designCosts: [],
   electricalMaterials: [],
-  panelCosts: [],
-  wiringCosts: [],
   travelExpense: {
     accommodationCost: 0,
     mealCost: 0,
     transportCost: 0
   },
-  setupCosts: [],
   outsourcingCosts: [],
   deliveryCost: {
     shippingCost: 0,
@@ -48,53 +49,66 @@ const initialData: ProjectData = {
     marginRate: 15
   },
   budgetAllocation: {
-    designCost: 0,
+    laborDesign: 0,
+    laborPanel: 0,
+    laborWiring: 0,
+    laborSetup: 0,
+    laborOther: 0,
     electricalMaterial: 0,
-    panelCost: 0,
-    wiringCost: 0,
     travelExpense: 0,
-    setupCost: 0,
     outsourcingCost: 0,
     deliveryCost: 0,
     consumableCost: 0,
-    overhead: 0,
-    manHourCost: 0
+    overhead: 0
   },
   manHourCost: {
-    workers: []
+    internalWorkers: [],
+    externalWorkers: []
   }
 }
 
 function App() {
   const [data, setData] = useState<ProjectData>(initialData)
+  const [employeeMaster, setEmployeeMaster] = useState<EmployeeMaster[]>([])
+  const [showEmployeeModal, setShowEmployeeModal] = useState(false)
+  const [currentFileName, setCurrentFileName] = useState<string | null>(null)
+
+  // 초기 로드 시 localStorage에서 직원 목록 불러오기
+  useEffect(() => {
+    setEmployeeMaster(loadEmployeeMaster())
+  }, [])
+
+  // 직원 추가
+  const handleAddEmployee = (employee: Omit<EmployeeMaster, 'id'>) => {
+    setEmployeeMaster((prev) => addEmployee(prev, employee))
+  }
+
+  // 직원 수정
+  const handleUpdateEmployee = (id: string, updates: Partial<Omit<EmployeeMaster, 'id'>>) => {
+    setEmployeeMaster((prev) => updateEmployee(prev, id, updates))
+  }
+
+  // 직원 삭제
+  const handleRemoveEmployee = (id: string) => {
+    setEmployeeMaster((prev) => removeEmployee(prev, id))
+  }
 
   const calculateSummary = useCallback((): ProfitSummary => {
+    const originalEstimate = data.projectInfo.originalEstimate
     const totalRevenue = data.projectInfo.contractAmount
 
-    const designCostTotal = data.designCosts.reduce(
-      (sum, item) => sum + item.hours * item.hourlyRate, 0
-    )
+    // 인건비 계산 (공수 통합)
+    const laborCostByCategory = calculateAllManHourByCategory(data.manHourCost)
+    const laborCostTotal = calculateManHourTotal(data.manHourCost)
 
     const electricalMaterialTotal = data.electricalMaterials.reduce(
       (sum, item) => sum + item.quantity * item.unitPrice, 0
-    )
-
-    const panelCostTotal = data.panelCosts.reduce(
-      (sum, item) => sum + (item.hours ?? 0) * (item.hourlyRate ?? 0), 0
-    )
-
-    const wiringCostTotal = data.wiringCosts.reduce(
-      (sum, item) => sum + item.hours * item.hourlyRate, 0
     )
 
     const travelExpenseTotal =
       data.travelExpense.accommodationCost +
       data.travelExpense.mealCost +
       data.travelExpense.transportCost
-
-    const setupCostTotal = data.setupCosts.reduce(
-      (sum, item) => sum + item.hours * item.hourlyRate, 0
-    )
 
     const outsourcingCostTotal = data.outsourcingCosts.reduce(
       (sum, item) => sum + item.amount, 0
@@ -106,21 +120,9 @@ function App() {
       (sum, item) => sum + item.amount, 0
     )
 
-    // 비용 항목별 공수 인건비 계산
-    const manHourByCategory = calculateAllManHourByCategory(data.manHourCost)
-    const manHourCostTotal = calculateManHourTotal(data.manHourCost)
-
-    // 공수 인건비를 각 비용 항목에 합산
-    const designCostWithManHour = designCostTotal + manHourByCategory.design
-    const panelCostWithManHour = panelCostTotal + manHourByCategory.panel
-    const wiringCostWithManHour = wiringCostTotal + manHourByCategory.wiring
-    const setupCostWithManHour = setupCostTotal + manHourByCategory.setup
-    const otherManHourCost = manHourByCategory.other  // 기타 공수 인건비 (별도 집계)
-
-    // 직접비 소계 (공수 인건비 포함)
-    const directCostSubtotal = designCostWithManHour + electricalMaterialTotal + panelCostWithManHour +
-      wiringCostWithManHour + travelExpenseTotal + setupCostWithManHour + outsourcingCostTotal +
-      deliveryCostTotal + consumableCostTotal + otherManHourCost
+    // 직접비 소계
+    const directCostSubtotal = laborCostTotal + electricalMaterialTotal +
+      travelExpenseTotal + outsourcingCostTotal + deliveryCostTotal + consumableCostTotal
 
     // 간접비 계산
     const overheadCost = directCostSubtotal * (data.overheadAndMargin.overheadRate / 100)
@@ -134,11 +136,11 @@ function App() {
     const targetMargin = data.overheadAndMargin.marginRate
     const marginDifference = profitRate - targetMargin
 
-    // 견적 배분 비교
+    // 견적 배분 비교 (금액 기반)
     const ba = data.budgetAllocation
-    const budgetTotal = ba.designCost + ba.electricalMaterial + ba.panelCost +
-      ba.wiringCost + ba.travelExpense + ba.setupCost + ba.outsourcingCost +
-      ba.deliveryCost + ba.consumableCost + ba.overhead + ba.manHourCost
+    const laborBudgetTotal = ba.laborDesign + ba.laborPanel + ba.laborWiring + ba.laborSetup + ba.laborOther
+    const budgetTotal = laborBudgetTotal + ba.electricalMaterial + ba.travelExpense +
+      ba.outsourcingCost + ba.deliveryCost + ba.consumableCost + ba.overhead
     const unallocated = totalRevenue - budgetTotal
 
     const createComparison = (label: string, budget: number, actual: number): CostComparison => {
@@ -150,16 +152,16 @@ function App() {
     }
 
     const costComparisons: CostComparison[] = [
-      createComparison('전장설계비', ba.designCost, designCostWithManHour),
+      createComparison('인건비 - 설계', ba.laborDesign, laborCostByCategory.design || 0),
+      createComparison('인건비 - 판넬', ba.laborPanel, laborCostByCategory.panel || 0),
+      createComparison('인건비 - 배선', ba.laborWiring, laborCostByCategory.wiring || 0),
+      createComparison('인건비 - 셋업', ba.laborSetup, laborCostByCategory.setup || 0),
+      createComparison('인건비 - 기타', ba.laborOther, laborCostByCategory.other || 0),
       createComparison('전기 자재비', ba.electricalMaterial, electricalMaterialTotal),
-      createComparison('판넬 제작비', ba.panelCost, panelCostWithManHour),
-      createComparison('기체 배선비', ba.wiringCost, wiringCostWithManHour),
       createComparison('출장 경비', ba.travelExpense, travelExpenseTotal),
-      createComparison('시운전/셋업', ba.setupCost, setupCostWithManHour),
       createComparison('외주 가공비', ba.outsourcingCost, outsourcingCostTotal),
       createComparison('운반/포장비', ba.deliveryCost, deliveryCostTotal),
       createComparison('소모품비', ba.consumableCost, consumableCostTotal),
-      createComparison('기타 공수', ba.manHourCost, otherManHourCost),
       createComparison('간접비', ba.overhead, indirectCostSubtotal),
     ]
 
@@ -171,17 +173,15 @@ function App() {
     const efficiencyPerManHour = estimatedManHours > 0 ? totalRevenue / estimatedManHours : 0
 
     return {
+      originalEstimate,
       totalRevenue,
-      designCostTotal: designCostWithManHour,
+      laborCostTotal,
+      laborCostByCategory,
       electricalMaterialTotal,
-      panelCostTotal: panelCostWithManHour,
-      wiringCostTotal: wiringCostWithManHour,
       travelExpenseTotal,
-      setupCostTotal: setupCostWithManHour,
       outsourcingCostTotal,
       deliveryCostTotal,
       consumableCostTotal,
-      manHourCostTotal: otherManHourCost,  // 기타 공수만 별도 표시
       directCostSubtotal,
       overheadCost,
       warrantyReserveCost,
@@ -209,6 +209,7 @@ function App() {
   const handleReset = () => {
     if (window.confirm('모든 데이터를 초기화하시겠습니까?')) {
       setData(initialData)
+      setCurrentFileName(null)
     }
   }
 
@@ -220,6 +221,10 @@ function App() {
 
     const result = await window.electronAPI.saveProject(JSON.stringify(data, null, 2))
     if (result.success) {
+      if (result.filePath) {
+        const fileName = result.filePath.split(/[/\\]/).pop() || result.filePath
+        setCurrentFileName(fileName)
+      }
       alert('프로젝트가 저장되었습니다.')
     } else if (!result.canceled) {
       alert('저장 실패: ' + result.error)
@@ -238,26 +243,39 @@ function App() {
         const loadedData = JSON.parse(result.data)
 
         // 이전 데이터 형식 호환성 처리
+        // 레거시 budgetAllocation 마이그레이션 (laborCost → 세부 항목)
+        const legacyBudget = loadedData.budgetAllocation
+        const migratedBudgetAllocation = {
+          ...initialData.budgetAllocation,
+          ...loadedData.budgetAllocation,
+          // 레거시 laborCost가 있고 새 필드가 없으면 배선으로 마이그레이션
+          laborWiring: legacyBudget?.laborWiring ?? legacyBudget?.laborCost ?? 0,
+        }
+
         const migratedData: ProjectData = {
           ...initialData,
           ...loadedData,
           projectInfo: { ...initialData.projectInfo, ...loadedData.projectInfo },
-          designCosts: loadedData.designCosts ?? [],
           electricalMaterials: loadedData.electricalMaterials ?? [],
-          // 구 panelCost 객체를 새 panelCosts 배열로 변환
-          panelCosts: loadedData.panelCosts ?? [],
-          wiringCosts: loadedData.wiringCosts ?? [],
           travelExpense: { ...initialData.travelExpense, ...loadedData.travelExpense },
-          setupCosts: loadedData.setupCosts ?? [],
           outsourcingCosts: loadedData.outsourcingCosts ?? [],
           deliveryCost: { ...initialData.deliveryCost, ...loadedData.deliveryCost },
           consumableCosts: loadedData.consumableCosts ?? [],
           overheadAndMargin: { ...initialData.overheadAndMargin, ...loadedData.overheadAndMargin },
-          budgetAllocation: { ...initialData.budgetAllocation, ...loadedData.budgetAllocation },
-          manHourCost: loadedData.manHourCost ?? { workers: [] },
+          budgetAllocation: migratedBudgetAllocation,
+          manHourCost: {
+            internalWorkers: loadedData.manHourCost?.internalWorkers ?? [],
+            externalWorkers: loadedData.manHourCost?.externalWorkers ?? loadedData.manHourCost?.workers ?? [],
+            sourceFile: loadedData.manHourCost?.sourceFile,
+            importedAt: loadedData.manHourCost?.importedAt
+          },
         }
 
         setData(migratedData)
+        if (result.filePath) {
+          const fileName = result.filePath.split(/[/\\]/).pop() || result.filePath
+          setCurrentFileName(fileName)
+        }
         alert('프로젝트를 불러왔습니다.')
       } catch {
         alert('파일 형식이 올바르지 않습니다.')
@@ -270,8 +288,16 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>프로젝트 손익계산기</h1>
+        <div className="header-title">
+          <h1>프로젝트 손익계산기</h1>
+          {currentFileName && (
+            <span className="current-file">{currentFileName}</span>
+          )}
+        </div>
         <div className="header-actions">
+          <button onClick={() => setShowEmployeeModal(true)} className="btn btn-employee">
+            직원 관리
+          </button>
           <button onClick={handleSave} className="btn btn-primary">
             저장
           </button>
@@ -287,35 +313,34 @@ function App() {
         </div>
       </header>
 
+      {/* 직원 관리 모달 */}
+      <EmployeeMasterForm
+        employees={employeeMaster}
+        onAdd={handleAddEmployee}
+        onUpdate={handleUpdateEmployee}
+        onRemove={handleRemoveEmployee}
+        isOpen={showEmployeeModal}
+        onClose={() => setShowEmployeeModal(false)}
+      />
+
       <main className="main-content">
         <div className="forms-container">
           <ProjectInfoForm
             data={data.projectInfo}
             onChange={(projectInfo) => setData({ ...data, projectInfo })}
           />
-          <DesignCostForm
-            data={data.designCosts}
-            onChange={(designCosts) => setData({ ...data, designCosts })}
+          <ManHourCostForm
+            data={data.manHourCost}
+            onChange={(manHourCost) => setData({ ...data, manHourCost })}
+            employees={employeeMaster}
           />
           <ElectricalMaterialForm
             data={data.electricalMaterials}
             onChange={(electricalMaterials) => setData({ ...data, electricalMaterials })}
           />
-          <PanelCostForm
-            data={data.panelCosts}
-            onChange={(panelCosts) => setData({ ...data, panelCosts })}
-          />
-          <WiringCostForm
-            data={data.wiringCosts}
-            onChange={(wiringCosts) => setData({ ...data, wiringCosts })}
-          />
           <TravelExpenseForm
             data={data.travelExpense}
             onChange={(travelExpense) => setData({ ...data, travelExpense })}
-          />
-          <SetupCostForm
-            data={data.setupCosts}
-            onChange={(setupCosts) => setData({ ...data, setupCosts })}
           />
           <OutsourcingCostForm
             data={data.outsourcingCosts}
@@ -329,16 +354,13 @@ function App() {
             data={data.consumableCosts}
             onChange={(consumableCosts) => setData({ ...data, consumableCosts })}
           />
-          <ManHourCostForm
-            data={data.manHourCost}
-            onChange={(manHourCost) => setData({ ...data, manHourCost })}
-          />
           <OverheadMarginForm
             data={data.overheadAndMargin}
             onChange={(overheadAndMargin) => setData({ ...data, overheadAndMargin })}
           />
           <BudgetAllocationForm
             data={data.budgetAllocation}
+            originalEstimate={data.projectInfo.originalEstimate}
             contractAmount={data.projectInfo.contractAmount}
             onChange={(budgetAllocation) => setData({ ...data, budgetAllocation })}
           />
