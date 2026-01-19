@@ -238,3 +238,159 @@ export function calculateExternalManDays(manHourCost: ManHourCost): number {
     0
   )
 }
+
+// 비용 항목 문자열 → 카테고리 변환
+function parseCostCategory(value: string): ManHourCostCategory {
+  const normalized = value.trim().toLowerCase()
+  if (normalized.includes('설계') || normalized === 'design') return 'design'
+  if (normalized.includes('판넬') || normalized === 'panel') return 'panel'
+  if (normalized.includes('배선') || normalized === 'wiring') return 'wiring'
+  if (normalized.includes('셋업') || normalized.includes('시운전') || normalized === 'setup') return 'setup'
+  if (normalized.includes('기타') || normalized === 'other') return 'other'
+  return 'wiring' // 기본값
+}
+
+// 구글 시트 URL을 CSV URL로 변환
+export function convertToGoogleSheetCsvUrl(url: string): string {
+  // 이미 CSV export URL인 경우
+  if (url.includes('/pub?') && url.includes('output=csv')) {
+    return url
+  }
+
+  // 일반 구글 시트 URL에서 ID 추출
+  // 형식: https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit...
+  const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)
+  if (match) {
+    const sheetId = match[1]
+    // gid 파라미터가 있으면 추출
+    const gidMatch = url.match(/gid=(\d+)/)
+    const gid = gidMatch ? gidMatch[1] : '0'
+    return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`
+  }
+
+  // 변환 불가능한 경우 원본 반환
+  return url
+}
+
+// 구글 시트에서 CSV 데이터 가져오기
+export async function fetchGoogleSheetCsv(url: string): Promise<string> {
+  const csvUrl = convertToGoogleSheetCsvUrl(url)
+
+  const response = await fetch(csvUrl)
+  if (!response.ok) {
+    throw new Error(`구글 시트를 불러올 수 없습니다. (${response.status})`)
+  }
+
+  const text = await response.text()
+  if (!text.trim()) {
+    throw new Error('구글 시트가 비어있습니다.')
+  }
+
+  return text
+}
+
+// CSV 문자열 파싱 (쉼표, 따옴표 처리)
+function parseCsvLine(line: string): string[] {
+  const result: string[] = []
+  let current = ''
+  let inQuotes = false
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"'
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
+    } else if (char === ',' && !inQuotes) {
+      result.push(current.trim())
+      current = ''
+    } else {
+      current += char
+    }
+  }
+  result.push(current.trim())
+
+  return result
+}
+
+// 구글 시트 CSV 파싱하여 외부 인원 데이터로 변환
+export function parseGoogleSheetCsv(csvText: string): ManHourCost {
+  const lines = csvText.split(/\r?\n/).filter(line => line.trim())
+  if (lines.length < 2) {
+    throw new Error('데이터가 없습니다. 헤더와 최소 1개의 데이터 행이 필요합니다.')
+  }
+
+  const externalWorkers: ExternalWorker[] = []
+
+  // 헤더 파싱
+  const headerRow = parseCsvLine(lines[0])
+
+  // 컬럼 인덱스 찾기 (유연하게)
+  const findIndex = (keywords: string[]) =>
+    headerRow.findIndex(h => keywords.some(k => h.toLowerCase().includes(k.toLowerCase())))
+
+  const companyIdx = findIndex(['업체', '소속', 'company'])
+  const nameIdx = findIndex(['작업자', '이름', 'name'])
+  const rankIdx = findIndex(['직급', 'rank'])
+  const rateIdx = findIndex(['일당', '단가', 'rate'])
+  const categoryIdx = findIndex(['비용항목', '항목', 'category'])
+
+  // 월별 컬럼 인덱스
+  const monthIndices: number[] = []
+  for (let m = 1; m <= 12; m++) {
+    const idx = headerRow.findIndex(h => h.trim() === `${m}월` || h.trim() === String(m))
+    monthIndices.push(idx)
+  }
+
+  // 데이터 행 파싱
+  for (let i = 1; i < lines.length; i++) {
+    const row = parseCsvLine(lines[i])
+    if (row.length === 0) continue
+
+    const personName = nameIdx >= 0 ? row[nameIdx]?.trim() : ''
+    if (!personName) continue // 빈 행 건너뛰기
+
+    const company = companyIdx >= 0 ? row[companyIdx]?.trim() || '' : ''
+    const rank = rankIdx >= 0 ? row[rankIdx]?.trim() || '' : ''
+    const dailyRate = rateIdx >= 0 ? Number(row[rateIdx]?.replace(/[,원]/g, '')) || 0 : 0
+    const costCategory = categoryIdx >= 0 ? parseCostCategory(row[categoryIdx] || '') : 'wiring'
+
+    // 월별 공수
+    const monthlyManDays: number[] = monthIndices.map(idx =>
+      idx >= 0 ? (Number(row[idx]?.replace(/[,]/g, '')) || 0) : 0
+    )
+
+    // 총 공수 계산
+    const totalManDays = monthlyManDays.reduce((sum, md) => sum + md, 0)
+
+    // 공수가 0인 작업자는 제외
+    if (totalManDays === 0 && dailyRate === 0) continue
+
+    externalWorkers.push({
+      id: `ext_gs_${Date.now()}_${i}`,
+      personName,
+      company,
+      rank,
+      dailyRate,
+      totalManDays,
+      projectManDays: totalManDays,
+      monthlyManDays,
+      dailyManDaysPerMonth: [],
+      costCategory
+    })
+  }
+
+  if (externalWorkers.length === 0) {
+    throw new Error('유효한 작업자 데이터가 없습니다. 시트 형식을 확인해주세요.')
+  }
+
+  return {
+    internalWorkers: [],
+    externalWorkers,
+    importedAt: new Date().toISOString()
+  }
+}

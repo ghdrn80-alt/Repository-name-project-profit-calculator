@@ -11,7 +11,9 @@ import {
   calculateInternalManDays,
   calculateExternalManDays,
   calculateInternalManDaysFromHours,
-  calculateInternalTotalHours
+  calculateInternalTotalHours,
+  fetchGoogleSheetCsv,
+  parseGoogleSheetCsv
 } from '../utils/manHourImport'
 import NumberInput from './NumberInput'
 import ManHourCalendar from './ManHourCalendar'
@@ -38,6 +40,8 @@ function ManHourCostForm({ data, onChange, employees }: Props) {
   const [showCalendar, setShowCalendar] = useState(false)
   const [activeTab, setActiveTab] = useState<'internal' | 'external'>('internal')
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('')
+  const [googleSheetUrl, setGoogleSheetUrl] = useState<string>(data.googleSheetUrl || '')
+  const [isLoadingSheet, setIsLoadingSheet] = useState(false)
 
   // 데이터 마이그레이션 (기존 workers 배열이 있는 경우)
   const internalWorkers = data.internalWorkers || []
@@ -67,6 +71,34 @@ function ManHourCostForm({ data, onChange, employees }: Props) {
     }
 
     e.target.value = ''
+  }
+
+  // 구글 시트에서 가져오기
+  const handleGoogleSheetImport = async () => {
+    if (!googleSheetUrl.trim()) {
+      alert('구글 시트 URL을 입력해주세요.')
+      return
+    }
+
+    setIsLoadingSheet(true)
+    try {
+      const csvText = await fetchGoogleSheetCsv(googleSheetUrl)
+      const imported = parseGoogleSheetCsv(csvText)
+
+      onChange({
+        ...data,
+        internalWorkers,
+        externalWorkers: imported.externalWorkers,
+        googleSheetUrl: googleSheetUrl.trim(),
+        importedAt: imported.importedAt
+      })
+
+      alert(`구글 시트에서 가져왔습니다. (외부 인원 ${imported.externalWorkers.length}명)`)
+    } catch (error) {
+      alert('구글 시트 가져오기 실패: ' + (error as Error).message)
+    } finally {
+      setIsLoadingSheet(false)
+    }
   }
 
   // 직원 선택해서 내부 인원 추가
@@ -115,26 +147,6 @@ function ManHourCostForm({ data, onChange, employees }: Props) {
       })
     }
     setSelectedEmployeeId('')
-  }
-
-  // 내부 인원 추가 (레거시 - 직접 입력 버튼용)
-  const addInternalWorker = () => {
-    const newWorker: InternalWorker = {
-      id: `int_${Date.now()}`,
-      personName: '',
-      rank: '',
-      monthlySalary: 0,
-      workingDaysPerMonth: 22,
-      overheadRate: 15,
-      hoursPerDay: 8,
-      projectHours: 0,
-      costCategory: 'wiring'
-    }
-    onChange({
-      ...data,
-      internalWorkers: [...internalWorkers, newWorker],
-      externalWorkers
-    })
   }
 
   // 외부 인원 추가
@@ -419,7 +431,7 @@ function ManHourCostForm({ data, onChange, employees }: Props) {
                 accept=".xlsx,.xls"
                 style={{ display: 'none' }}
               />
-              <button onClick={handleImportClick} className="btn btn-primary">
+              <button onClick={handleImportClick} className="btn btn-secondary">
                 엑셀 임포트
               </button>
               <button onClick={addExternalWorker} className="btn btn-add">
@@ -434,9 +446,32 @@ function ManHourCostForm({ data, onChange, employees }: Props) {
             </div>
           </div>
 
-          {data.sourceFile && (
+          {/* 구글 시트 연동 */}
+          <div className="google-sheet-import">
+            <div className="google-sheet-input-row">
+              <input
+                type="text"
+                value={googleSheetUrl}
+                onChange={(e) => setGoogleSheetUrl(e.target.value)}
+                placeholder="구글 시트 URL 입력 (공유 > 웹에 게시된 URL)"
+                className="google-sheet-url-input"
+              />
+              <button
+                onClick={handleGoogleSheetImport}
+                disabled={isLoadingSheet || !googleSheetUrl.trim()}
+                className="btn btn-primary"
+              >
+                {isLoadingSheet ? '가져오는 중...' : '구글 시트에서 가져오기'}
+              </button>
+            </div>
+            <p className="google-sheet-help">
+              구글 시트 → 파일 → 공유 → 웹에 게시 → CSV 형식으로 게시 후 URL을 붙여넣기
+            </p>
+          </div>
+
+          {(data.sourceFile || data.googleSheetUrl) && (
             <p className="import-info">
-              파일: {data.sourceFile}
+              {data.sourceFile ? `파일: ${data.sourceFile}` : `구글 시트: ${data.googleSheetUrl?.substring(0, 50)}...`}
               {data.importedAt && ` (${new Date(data.importedAt).toLocaleString()})`}
             </p>
           )}

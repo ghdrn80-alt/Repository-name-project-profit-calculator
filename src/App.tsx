@@ -72,6 +72,13 @@ function App() {
   const [employeeMaster, setEmployeeMaster] = useState<EmployeeMaster[]>([])
   const [showEmployeeModal, setShowEmployeeModal] = useState(false)
   const [currentFileName, setCurrentFileName] = useState<string | null>(null)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+
+  // 상태 메시지 표시 (3초 후 자동 사라짐)
+  const showStatus = (message: string) => {
+    setStatusMessage(message)
+    setTimeout(() => setStatusMessage(null), 3000)
+  }
 
   // 초기 로드 시 localStorage에서 직원 목록 불러오기
   useEffect(() => {
@@ -219,15 +226,20 @@ function App() {
       return
     }
 
-    const result = await window.electronAPI.saveProject(JSON.stringify(data, null, 2))
+    // 프로젝트 데이터 + 직원 마스터 함께 저장
+    const saveData = {
+      ...data,
+      employeeMaster: employeeMaster
+    }
+    const result = await window.electronAPI.saveProject(JSON.stringify(saveData, null, 2))
     if (result.success) {
       if (result.filePath) {
         const fileName = result.filePath.split(/[/\\]/).pop() || result.filePath
         setCurrentFileName(fileName)
       }
-      alert('프로젝트가 저장되었습니다.')
+      showStatus('프로젝트가 저장되었습니다.')
     } else if (!result.canceled) {
-      alert('저장 실패: ' + result.error)
+      showStatus('저장 실패: ' + result.error)
     }
   }
 
@@ -272,16 +284,23 @@ function App() {
         }
 
         setData(migratedData)
+
+        // 직원 마스터 데이터도 불러오기
+        if (loadedData.employeeMaster && Array.isArray(loadedData.employeeMaster)) {
+          setEmployeeMaster(loadedData.employeeMaster)
+          saveEmployeeMaster(loadedData.employeeMaster)  // localStorage에도 저장
+        }
+
         if (result.filePath) {
           const fileName = result.filePath.split(/[/\\]/).pop() || result.filePath
           setCurrentFileName(fileName)
         }
-        alert('프로젝트를 불러왔습니다.')
+        showStatus('프로젝트를 불러왔습니다.')
       } catch {
-        alert('파일 형식이 올바르지 않습니다.')
+        showStatus('파일 형식이 올바르지 않습니다.')
       }
     } else if (!result.canceled) {
-      alert('불러오기 실패: ' + result.error)
+      showStatus('불러오기 실패: ' + result.error)
     }
   }
 
@@ -292,6 +311,9 @@ function App() {
           <h1>프로젝트 손익계산기</h1>
           {currentFileName && (
             <span className="current-file">{currentFileName}</span>
+          )}
+          {statusMessage && (
+            <span className="status-message">{statusMessage}</span>
           )}
         </div>
         <div className="header-actions">

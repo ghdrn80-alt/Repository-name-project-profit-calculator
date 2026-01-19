@@ -48,6 +48,22 @@ body {
   opacity: 0.9;
 }
 
+.status-message {
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: #10b981;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  animation: fadeInOut 3s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 .header-actions {
   display: flex;
   gap: 0.75rem;
@@ -1186,21 +1202,24 @@ body {
 }
 
 /* 내부 인원 테이블 정렬 */
-.internal-table td:nth-child(4),
-.internal-table th:nth-child(4) {
+.internal-table th:nth-child(3),
+.internal-table th:nth-child(4),
+.internal-table th:nth-child(5),
+.internal-table th:nth-child(6) {
+  text-align: center;
+}
+
+.internal-table td:nth-child(3) input,
+.internal-table td:nth-child(4) input {
   text-align: center;
 }
 
 .internal-table td:nth-child(5),
-.internal-table th:nth-child(5) {
+.internal-table .calculated-value {
   text-align: center;
 }
 
 .internal-table td:nth-child(6),
-.internal-table th:nth-child(6) {
-  text-align: right;
-}
-
 .internal-table .subtotal {
   text-align: right;
 }
@@ -1217,7 +1236,7 @@ body {
   text-align: center;
 }
 
-.internal-table tfoot td:last-child {
+.internal-table tfoot td.text-right {
   text-align: right;
 }
 
@@ -1295,27 +1314,33 @@ body {
 }
 
 /* 외부 인원 테이블 정렬 */
-.external-section .manhour-table td:nth-child(4),
-.external-section .manhour-table th:nth-child(4) {
-  text-align: right;
-}
-
-.external-section .manhour-table td:nth-child(5),
-.external-section .manhour-table th:nth-child(5) {
+.external-section .manhour-table th:nth-child(4),
+.external-section .manhour-table th:nth-child(5),
+.external-section .manhour-table th:nth-child(6),
+.external-section .manhour-table th:nth-child(7) {
   text-align: center;
 }
 
-.external-section .manhour-table td:nth-child(6),
-.external-section .manhour-table th:nth-child(6) {
+.external-section .manhour-table td:nth-child(4) input,
+.external-section .manhour-table td:nth-child(5) input,
+.external-section .manhour-table td:nth-child(6) input {
   text-align: center;
 }
 
 .external-section .manhour-table td:nth-child(7),
-.external-section .manhour-table th:nth-child(7) {
+.external-section .manhour-table .subtotal {
   text-align: right;
 }
 
-.external-section .manhour-table .subtotal {
+.external-section .manhour-table tfoot td.total-label {
+  text-align: right;
+}
+
+.external-section .manhour-table tfoot td.total-value {
+  text-align: center;
+}
+
+.external-section .manhour-table tfoot td.text-right {
   text-align: right;
 }
 
@@ -1839,4 +1864,54 @@ body {
 
 .btn-employee:hover {
   background: #047857;
+}
+
+/* Google Sheet Import */
+.google-sheet-import {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.google-sheet-input-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.google-sheet-url-input {
+  flex: 1;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.google-sheet-url-input:focus {
+  outline: none;
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.google-sheet-import .btn-primary {
+  background: #22c55e;
+  color: white;
+  white-space: nowrap;
+}
+
+.google-sheet-import .btn-primary:hover {
+  background: #16a34a;
+}
+
+.google-sheet-import .btn-primary:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.google-sheet-help {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #16a34a;
 }

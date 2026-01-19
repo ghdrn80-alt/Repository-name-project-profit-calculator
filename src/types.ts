@@ -162,6 +162,7 @@ export interface ManHourCost {
   externalWorkers: ExternalWorker[]  // 외부 인원 (외주)
   workers?: ManHourWorker[]  // 기존 호환용 (deprecated)
   sourceFile?: string       // 임포트한 파일 경로
+  googleSheetUrl?: string   // 구글 시트 URL
   importedAt?: string       // 임포트 일시
 }
 
