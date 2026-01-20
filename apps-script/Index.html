@@ -490,18 +490,14 @@
 
     <!-- 내부인원 투입시간 입력 모달 -->
     <div id="internalAttendanceModal" class="modal" style="display:none">
-      <div class="modal-content modal-medium">
+      <div class="modal-content modal-large">
         <div class="modal-header" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7)">
-          <h2 id="internalAttendanceModalTitle" style="color:#166534">내부인원 투입시간</h2>
+          <h2 id="internalAttendanceModalTitle" style="color:#166534">내부인원 투입</h2>
           <button onclick="closeInternalAttendanceModal()" class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
+          <p style="font-size:0.85rem;color:#64748b;margin-bottom:1rem">각 직원별로 [+ 추가] 버튼을 클릭하여 프로젝트, 비용항목, 투입시간을 입력하세요.</p>
           <div id="internalAttendanceInputList" class="internal-attendance-input-list"></div>
-          <div style="margin-top:1rem;display:flex;gap:0.5rem">
-            <button onclick="setAllInternalHours(8)" class="btn btn-secondary" style="flex:1">전체 8시간</button>
-            <button onclick="setAllInternalHours(4)" class="btn btn-secondary" style="flex:1">전체 4시간</button>
-            <button onclick="setAllInternalHours(0)" class="btn btn-secondary" style="flex:1">전체 초기화</button>
-          </div>
           <button onclick="saveInternalAttendanceForDate()" class="btn btn-add" style="width:100%;margin-top:1rem">저장</button>
         </div>
       </div>

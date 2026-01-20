@@ -1458,6 +1458,7 @@ function loadProjectInfo(projectId) {
   setVal('estimatedManHours', project.estimatedManHours || '');
 
   // 데이터 모델 업데이트
+  projectData.projectInfo.projectCode = project.projectCode || '';
   projectData.projectInfo.projectName = project.projectName || '';
   projectData.projectInfo.clientName = project.clientName || '';
   projectData.projectInfo.originalEstimate = project.originalEstimate || 0;
@@ -2329,12 +2330,26 @@ function loadAttendanceData() {
 // ============ 내부인원 출근부 ============
 
 // 내부인원 출근부 데이터 모델
+// 새 구조: { "2026-01-15": { "emp_id1": [{ hours: 8, costCategory: 'design', projectCode: 'PRJ001' }] } }
 let internalAttendanceData = {
-  records: {}  // { "2026-01-15": { "emp_id1": 8, "emp_id2": 4 } } - 시간 단위
+  records: {}
 };
 
 let currentInternalAttendanceMonth = new Date().getMonth() + 1;
 let selectedInternalAttendanceDate = null;
+
+// 레거시 데이터 마이그레이션 (숫자 -> 배열 구조)
+function migrateInternalAttendanceData() {
+  Object.keys(internalAttendanceData.records).forEach(dateStr => {
+    const dayRecords = internalAttendanceData.records[dateStr];
+    Object.keys(dayRecords).forEach(empId => {
+      if (typeof dayRecords[empId] === 'number') {
+        // 기존 숫자 형식을 새 배열 형식으로 변환
+        dayRecords[empId] = [{ hours: dayRecords[empId], costCategory: 'other', projectCode: '' }];
+      }
+    });
+  });
+}
 
 function initInternalAttendance() {
   document.getElementById('internalAttendanceMonth').value = currentInternalAttendanceMonth;
@@ -2370,7 +2385,12 @@ function renderInternalAttendanceCalendar() {
 
     const dayRecords = internalAttendanceData.records[dateStr] || {};
     const workerCount = Object.keys(dayRecords).length;
-    const totalHours = Object.values(dayRecords).reduce((sum, h) => sum + (h || 0), 0);
+    const totalHours = Object.values(dayRecords).reduce((sum, items) => {
+      if (Array.isArray(items)) {
+        return sum + items.reduce((s, item) => s + (item.hours || 0), 0);
+      }
+      return sum + (items || 0); // 레거시 지원
+    }, 0);
 
     const workerNames = Object.keys(dayRecords)
       .map(empId => employeeMaster.find(e => e.id === empId))
@@ -2402,33 +2422,102 @@ function renderInternalAttendanceCalendar() {
 function openInternalAttendanceModal(dateStr) {
   selectedInternalAttendanceDate = dateStr;
   const [year, month, day] = dateStr.split('-');
-  document.getElementById('internalAttendanceModalTitle').textContent = `${month}월 ${parseInt(day)}일 내부인원 투입시간`;
+  document.getElementById('internalAttendanceModalTitle').textContent = `${month}월 ${parseInt(day)}일 내부인원 투입`;
 
-  const existingRecords = internalAttendanceData.records[dateStr] || {};
+  renderInternalAttendanceModalContent();
+  document.getElementById('internalAttendanceModal').style.display = 'flex';
+}
+
+function renderInternalAttendanceModalContent() {
+  const existingRecords = internalAttendanceData.records[selectedInternalAttendanceDate] || {};
 
   if (employeeMaster.length === 0) {
     document.getElementById('internalAttendanceInputList').innerHTML = '<p class="empty-message">먼저 직원관리에서 직원을 추가하세요</p>';
-  } else {
-    const inputs = employeeMaster.map(emp => {
-      const hours = existingRecords[emp.id] || 0;
-      const dailyRate = emp.monthlySalary / (emp.workingDaysPerMonth || 22);
-      return `
-        <div class="internal-attendance-input-item">
-          <span class="emp-info">
-            <strong>${emp.personName}</strong>
-            <span class="emp-detail">${emp.rank || ''} | 일당 ${formatNumber(Math.round(dailyRate))}원</span>
-          </span>
-          <div class="hours-input">
-            <input type="number" min="0" max="24" step="0.5" value="${hours}" data-emp-id="${emp.id}" placeholder="0">
-            <span>시간</span>
-          </div>
-        </div>
-      `;
-    }).join('');
-    document.getElementById('internalAttendanceInputList').innerHTML = inputs;
+    return;
   }
 
-  document.getElementById('internalAttendanceModal').style.display = 'flex';
+  // 프로젝트 옵션 생성
+  const projectOptions = '<option value="">선택</option>' +
+    projectMaster.map(p => `<option value="${p.projectCode}">${p.projectCode}</option>`).join('');
+
+  // 비용항목 옵션
+  const categoryOptions = Object.entries(COST_CATEGORY_OPTIONS)
+    .map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+
+  const inputs = employeeMaster.map(emp => {
+    const items = existingRecords[emp.id] || [];
+    // 레거시 데이터 처리
+    const itemsArray = Array.isArray(items) ? items : [{ hours: items, costCategory: 'other', projectCode: '' }];
+    const dailyRate = emp.monthlySalary / (emp.workingDaysPerMonth || 22);
+
+    let itemsHtml = '';
+    if (itemsArray.length > 0 && itemsArray.some(item => item.hours > 0)) {
+      itemsHtml = itemsArray.map((item, idx) => `
+        <div class="attendance-entry" data-emp-id="${emp.id}" data-idx="${idx}">
+          <select class="entry-project" data-field="projectCode">
+            <option value="">프로젝트</option>
+            ${projectMaster.map(p => `<option value="${p.projectCode}" ${item.projectCode === p.projectCode ? 'selected' : ''}>${p.projectCode}</option>`).join('')}
+          </select>
+          <select class="entry-category" data-field="costCategory">
+            ${Object.entries(COST_CATEGORY_OPTIONS).map(([k, v]) =>
+              `<option value="${k}" ${item.costCategory === k ? 'selected' : ''}>${v}</option>`).join('')}
+          </select>
+          <input type="number" class="entry-hours" data-field="hours" min="0" max="24" step="0.5" value="${item.hours || 0}">
+          <span>h</span>
+          <button type="button" class="btn-remove-entry" onclick="removeAttendanceEntry('${emp.id}', ${idx})">×</button>
+        </div>
+      `).join('');
+    }
+
+    return `
+      <div class="internal-attendance-input-item" data-emp-id="${emp.id}">
+        <div class="emp-header">
+          <span class="emp-info">
+            <strong>${emp.personName}</strong>
+            <span class="emp-detail">${emp.rank || ''} | 단가 ${formatNumber(Math.round(dailyRate * (1 + (emp.overheadRate || 15) / 100)))}원</span>
+          </span>
+          <button type="button" class="btn btn-small btn-add-entry" onclick="addAttendanceEntry('${emp.id}')">+ 추가</button>
+        </div>
+        <div class="attendance-entries" id="entries-${emp.id}">
+          ${itemsHtml || '<p class="no-entry">항목 없음</p>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('internalAttendanceInputList').innerHTML = inputs;
+}
+
+function addAttendanceEntry(empId) {
+  const container = document.getElementById(`entries-${empId}`);
+  const noEntry = container.querySelector('.no-entry');
+  if (noEntry) noEntry.remove();
+
+  const idx = container.querySelectorAll('.attendance-entry').length;
+  const projectOptions = projectMaster.map(p => `<option value="${p.projectCode}">${p.projectCode}</option>`).join('');
+  const categoryOptions = Object.entries(COST_CATEGORY_OPTIONS)
+    .map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+
+  const entryHtml = `
+    <div class="attendance-entry" data-emp-id="${empId}" data-idx="${idx}">
+      <select class="entry-project" data-field="projectCode">
+        <option value="">프로젝트</option>
+        ${projectOptions}
+      </select>
+      <select class="entry-category" data-field="costCategory">
+        ${categoryOptions}
+      </select>
+      <input type="number" class="entry-hours" data-field="hours" min="0" max="24" step="0.5" value="8">
+      <span>h</span>
+      <button type="button" class="btn-remove-entry" onclick="this.parentElement.remove()">×</button>
+    </div>
+  `;
+  container.insertAdjacentHTML('beforeend', entryHtml);
+}
+
+function removeAttendanceEntry(empId, idx) {
+  const entry = document.querySelector(`.attendance-entry[data-emp-id="${empId}"][data-idx="${idx}"]`);
+  if (entry) entry.remove();
 }
 
 function closeInternalAttendanceModal() {
@@ -2437,7 +2526,7 @@ function closeInternalAttendanceModal() {
 }
 
 function setAllInternalHours(hours) {
-  document.querySelectorAll('#internalAttendanceInputList input[type="number"]').forEach(input => {
+  document.querySelectorAll('#internalAttendanceInputList .entry-hours').forEach(input => {
     input.value = hours;
   });
 }
@@ -2446,11 +2535,27 @@ function saveInternalAttendanceForDate() {
   if (!selectedInternalAttendanceDate) return;
 
   const records = {};
-  document.querySelectorAll('#internalAttendanceInputList input[type="number"]').forEach(input => {
-    const empId = input.dataset.empId;
-    const hours = parseFloat(input.value) || 0;
-    if (hours > 0) {
-      records[empId] = hours;
+
+  // 각 직원별로 항목 수집
+  employeeMaster.forEach(emp => {
+    const container = document.getElementById(`entries-${emp.id}`);
+    if (!container) return;
+
+    const entries = container.querySelectorAll('.attendance-entry');
+    const items = [];
+
+    entries.forEach(entry => {
+      const projectCode = entry.querySelector('.entry-project')?.value || '';
+      const costCategory = entry.querySelector('.entry-category')?.value || 'other';
+      const hours = parseFloat(entry.querySelector('.entry-hours')?.value) || 0;
+
+      if (hours > 0) {
+        items.push({ hours, costCategory, projectCode });
+      }
+    });
+
+    if (items.length > 0) {
+      records[emp.id] = items;
     }
   });
 
@@ -2481,9 +2586,15 @@ function renderInternalAttendanceSummary() {
   Object.entries(internalAttendanceData.records).forEach(([dateStr, dayRecords]) => {
     const [y, m] = dateStr.split('-').map(Number);
     if (y === year && m === month) {
-      Object.entries(dayRecords).forEach(([empId, hours]) => {
+      Object.entries(dayRecords).forEach(([empId, items]) => {
         if (summary[empId]) {
-          summary[empId].totalHours += hours;
+          // 새 배열 구조 처리
+          if (Array.isArray(items)) {
+            summary[empId].totalHours += items.reduce((sum, item) => sum + (item.hours || 0), 0);
+          } else {
+            // 레거시 숫자 형식 처리
+            summary[empId].totalHours += items;
+          }
         }
       });
     }
@@ -2573,63 +2684,66 @@ function autoSyncInternalAttendanceToWorkers() {
 }
 
 function doSyncInternalAttendance() {
-  // 직원별 총 투입시간 계산
-  const empHours = {};
-  employeeMaster.forEach(emp => {
-    empHours[emp.id] = 0;
-  });
+  const currentProjectCode = projectData.projectInfo.projectCode || '';
+
+  if (!currentProjectCode) {
+    showStatus('프로젝트 코드가 설정되지 않았습니다. 프로젝트를 먼저 불러오세요.');
+    return;
+  }
+
+  // 직원별, 비용항목별 투입시간 계산 (현재 프로젝트 코드와 일치하는 것만)
+  const empData = {};  // { empId: { costCategory: hours } }
 
   Object.values(internalAttendanceData.records).forEach(dayRecords => {
-    Object.entries(dayRecords).forEach(([empId, hours]) => {
-      if (empHours[empId] !== undefined) {
-        empHours[empId] += hours;
+    Object.entries(dayRecords).forEach(([empId, items]) => {
+      if (!empData[empId]) {
+        empData[empId] = {};
+      }
+
+      // 새 배열 구조 처리
+      if (Array.isArray(items)) {
+        items.forEach(item => {
+          // 프로젝트 코드가 일치하는 경우만 집계
+          if (item.projectCode === currentProjectCode) {
+            const cat = item.costCategory || 'other';
+            empData[empId][cat] = (empData[empId][cat] || 0) + (item.hours || 0);
+          }
+        });
+      } else {
+        // 레거시 숫자 형식 - 프로젝트 코드 없으므로 무시
       }
     });
   });
 
-  // 내부인원 공수표에 추가/업데이트
+  // 기존 출근부 연동 데이터 제거
+  projectData.internalWorkers = projectData.internalWorkers.filter(iw => !iw.internalAttendanceId);
+
+  // 내부인원 공수표에 추가
   employeeMaster.forEach(emp => {
-    const hours = empHours[emp.id] || 0;
+    const categoryHours = empData[emp.id] || {};
 
-    const existing = projectData.internalWorkers.find(
-      iw => iw.internalAttendanceId === emp.id
-    );
-
-    if (existing) {
-      existing.personName = emp.personName;
-      existing.rank = emp.rank;
-      existing.monthlySalary = emp.monthlySalary;
-      existing.workingDaysPerMonth = emp.workingDaysPerMonth || 22;
-      existing.overheadRate = emp.overheadRate || 15;
-      existing.projectHours = hours;
-    } else if (hours > 0) {
-      projectData.internalWorkers.push({
-        id: generateId(),
-        internalAttendanceId: emp.id,
-        employeeId: emp.id,
-        personName: emp.personName,
-        rank: emp.rank,
-        monthlySalary: emp.monthlySalary,
-        workingDaysPerMonth: emp.workingDaysPerMonth || 22,
-        overheadRate: emp.overheadRate || 15,
-        hoursPerDay: emp.hoursPerDay || 8,
-        projectHours: hours,
-        costCategory: 'wiring'
-      });
-    }
-  });
-
-  // 출근부에서 삭제된 직원은 공수표에서도 제거
-  const empIds = employeeMaster.map(e => e.id);
-  projectData.internalWorkers = projectData.internalWorkers.filter(iw => {
-    if (iw.internalAttendanceId) {
-      return empIds.includes(iw.internalAttendanceId);
-    }
-    return true;
+    Object.entries(categoryHours).forEach(([costCategory, hours]) => {
+      if (hours > 0) {
+        projectData.internalWorkers.push({
+          id: generateId(),
+          internalAttendanceId: emp.id,
+          employeeId: emp.id,
+          personName: emp.personName,
+          rank: emp.rank,
+          monthlySalary: emp.monthlySalary,
+          workingDaysPerMonth: emp.workingDaysPerMonth || 22,
+          overheadRate: emp.overheadRate || 15,
+          hoursPerDay: emp.hoursPerDay || 8,
+          projectHours: hours,
+          costCategory: costCategory
+        });
+      }
+    });
   });
 
   renderInternalWorkers();
   updateDashboard();
+  showStatus(`프로젝트 "${currentProjectCode}" 공수표에 반영됨`);
 }
 
 // 내부인원 출근부 저장

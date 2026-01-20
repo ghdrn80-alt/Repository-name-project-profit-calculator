@@ -1796,18 +1796,24 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  max-height: 400px;
+  max-height: 500px;
   overflow-y: auto;
 }
 
 .internal-attendance-input-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.5rem;
   padding: 0.75rem;
   background: #f8fafc;
   border-radius: 8px;
   border-left: 4px solid #10b981;
+}
+
+.internal-attendance-input-item .emp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .internal-attendance-input-item .emp-info {
@@ -1826,31 +1832,94 @@ body {
   color: #64748b;
 }
 
-.internal-attendance-input-item .hours-input {
+.attendance-entries {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
 }
 
-.internal-attendance-input-item .hours-input input {
-  width: 70px;
-  padding: 0.5rem;
-  border: 2px solid #e2e8f0;
+.attendance-entries .no-entry {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 0;
+  padding: 0.25rem 0;
+}
+
+.attendance-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  background: white;
   border-radius: 6px;
-  font-size: 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+.attendance-entry .entry-project {
+  width: 100px;
+  padding: 0.3rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.attendance-entry .entry-category {
+  width: 100px;
+  padding: 0.3rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.attendance-entry .entry-hours {
+  width: 55px;
+  padding: 0.3rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.85rem;
   text-align: center;
   font-weight: 600;
 }
 
-.internal-attendance-input-item .hours-input input:focus {
-  outline: none;
-  border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+.attendance-entry span {
+  font-size: 0.8rem;
+  color: #64748b;
 }
 
-.internal-attendance-input-item .hours-input span {
-  font-size: 0.875rem;
-  color: #64748b;
+.btn-remove-entry {
+  background: #ef4444;
+  color: white;
+  border: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.btn-remove-entry:hover {
+  background: #dc2626;
+}
+
+.btn-add-entry {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.btn-add-entry:hover {
+  background: #059669;
+}
+
+.btn-small {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
 }
 
 /* 반응형 */
