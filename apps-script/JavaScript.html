@@ -1694,10 +1694,15 @@ function confirmLoadWorkersFromSpreadsheet() {
 // ============ 메인 탭 전환 ============
 
 function switchMainTab(tab) {
+  // 모든 탭 버튼 비활성화
   document.querySelectorAll('.main-tab').forEach(btn => btn.classList.remove('active'));
+
+  // 모든 탭 컨텐츠 숨기기
   document.getElementById('calculatorTab').style.display = 'none';
   document.getElementById('externalAttendanceTab').style.display = 'none';
+  document.getElementById('externalAttendanceTab').classList.remove('active');
   document.getElementById('internalAttendanceTab').style.display = 'none';
+  document.getElementById('internalAttendanceTab').classList.remove('active');
 
   if (tab === 'calculator') {
     document.querySelector('[data-tab="calculator"]').classList.add('active');
@@ -1708,10 +1713,12 @@ function switchMainTab(tab) {
   } else if (tab === 'external') {
     document.querySelector('[data-tab="external"]').classList.add('active');
     document.getElementById('externalAttendanceTab').style.display = 'block';
+    document.getElementById('externalAttendanceTab').classList.add('active');
     initAttendance();
   } else if (tab === 'internal') {
     document.querySelector('[data-tab="internal"]').classList.add('active');
     document.getElementById('internalAttendanceTab').style.display = 'block';
+    document.getElementById('internalAttendanceTab').classList.add('active');
     initInternalAttendance();
   }
 }
