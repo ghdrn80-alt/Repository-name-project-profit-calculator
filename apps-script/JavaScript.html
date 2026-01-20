@@ -29,6 +29,18 @@ let projectData = JSON.parse(JSON.stringify(initialData));
 let employeeMaster = [];
 let projectMaster = [];
 
+// 외부인원 직급별 기본 일당
+const EXTERNAL_RANK_RATES = {
+  '계장': 180000,
+  '준계장': 200000,
+  '조공': 180000,
+  '초보자': 100000,
+  '기타1': 300000,
+  '기타2': 190000,
+  '기타3': 80000,
+  '기타4': 300000
+};
+
 // ============ 초기화 ============
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -1756,6 +1768,30 @@ function removeAttendanceWorker(id) {
   renderAttendanceSummary();
 }
 
+// 외부인원 직급 옵션 생성
+function getRankOptions(selectedRank) {
+  let options = '<option value="">-- 직급 선택 --</option>';
+  Object.keys(EXTERNAL_RANK_RATES).forEach(rank => {
+    const selected = rank === selectedRank ? 'selected' : '';
+    options += `<option value="${rank}" ${selected}>${rank} (${formatNumber(EXTERNAL_RANK_RATES[rank])}원)</option>`;
+  });
+  return options;
+}
+
+// 직급 변경 시 일당 자동 입력
+function onRankChange(workerId, rank) {
+  const worker = attendanceData.workers.find(w => w.id === workerId);
+  if (worker) {
+    worker.rank = rank;
+    if (EXTERNAL_RANK_RATES[rank]) {
+      worker.dailyRate = EXTERNAL_RANK_RATES[rank];
+    }
+    renderAttendanceWorkers();
+    renderAttendanceCalendar();
+    renderAttendanceSummary();
+  }
+}
+
 // 출근부 인원 목록 렌더링
 function renderAttendanceWorkers() {
   const container = document.getElementById('attendanceWorkersList');
@@ -1772,8 +1808,9 @@ function renderAttendanceWorkers() {
     <div class="attendance-worker-item">
       <input type="text" placeholder="이름" value="${w.name || ''}"
         onchange="updateAttendanceWorker('${w.id}','name',this.value)">
-      <input type="text" placeholder="직급" value="${w.rank || ''}"
-        onchange="updateAttendanceWorker('${w.id}','rank',this.value)">
+      <select class="rank-select" onchange="onRankChange('${w.id}',this.value)">
+        ${getRankOptions(w.rank)}
+      </select>
       <select class="project-select" onchange="updateAttendanceWorker('${w.id}','projectCode',this.value)">
         ${projectOptions.replace(`value="${w.projectCode}"`, `value="${w.projectCode}" selected`)}
       </select>
