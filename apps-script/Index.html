@@ -24,8 +24,9 @@
 
     <!-- 메인 탭 네비게이션 -->
     <nav class="main-tabs">
-      <button class="main-tab active" onclick="switchMainTab('calculator')">손익계산기</button>
-      <button class="main-tab" onclick="switchMainTab('attendance')">외부인원 출근부</button>
+      <button class="main-tab active" data-tab="calculator" onclick="switchMainTab('calculator')">손익계산기</button>
+      <button class="main-tab" data-tab="internal" onclick="switchMainTab('internal')">내부인원 출근부</button>
+      <button class="main-tab" data-tab="external" onclick="switchMainTab('external')">외부인원 출근부</button>
     </nav>
 
     <!-- 손익계산기 탭 -->
@@ -252,11 +253,53 @@
       </div>
     </main>
 
+    <!-- 내부인원 출근부 탭 -->
+    <main id="internalAttendanceTab" class="main-content attendance-view" style="display:none">
+      <div class="attendance-container">
+        <section class="form-section internal-section">
+          <div class="attendance-header">
+            <h2>2026년 내부인원 출근부</h2>
+            <div class="attendance-controls">
+              <select id="internalAttendanceMonth" onchange="renderInternalAttendanceCalendar()">
+                <option value="1">1월</option>
+                <option value="2">2월</option>
+                <option value="3">3월</option>
+                <option value="4">4월</option>
+                <option value="5">5월</option>
+                <option value="6">6월</option>
+                <option value="7">7월</option>
+                <option value="8">8월</option>
+                <option value="9">9월</option>
+                <option value="10">10월</option>
+                <option value="11">11월</option>
+                <option value="12">12월</option>
+              </select>
+              <button onclick="syncInternalAttendanceToWorkers()" class="btn btn-primary" style="background:#10b981">공수표에 반영</button>
+            </div>
+          </div>
+          <div class="internal-info-box">
+            내부인원은 <strong>직원관리</strong>에 등록된 직원 목록을 사용합니다. 날짜를 클릭하여 투입시간(시간)을 입력하세요.
+            <br>비용은 월급여 기반으로 자동 계산됩니다.
+          </div>
+        </section>
+
+        <section class="form-section calendar-section">
+          <h3>월별 투입시간 달력</h3>
+          <div id="internalAttendanceCalendar" class="attendance-calendar"></div>
+        </section>
+
+        <section class="form-section">
+          <h3>월별 투입 집계 (시간 기반)</h3>
+          <div id="internalAttendanceSummary" class="attendance-summary"></div>
+        </section>
+      </div>
+    </main>
+
     <!-- 외부인원 출근부 탭 -->
-    <main id="attendanceTab" class="main-content attendance-view" style="display:none">
+    <main id="externalAttendanceTab" class="main-content attendance-view" style="display:none">
       <div class="attendance-container">
         <!-- 출근부 헤더 -->
-        <section class="form-section">
+        <section class="form-section external-section">
           <div class="attendance-header">
             <h2>2026년 외부인원 출근부</h2>
             <div class="attendance-controls">
@@ -406,7 +449,7 @@
       </div>
     </div>
 
-    <!-- 출근자 선택 모달 -->
+    <!-- 출근자 선택 모달 (외부인원) -->
     <div id="attendanceModal" class="modal" style="display:none">
       <div class="modal-content modal-medium">
         <div class="modal-header" style="background:linear-gradient(135deg,#eff6ff,#dbeafe)">
@@ -420,6 +463,25 @@
             <button onclick="deselectAllAttendance()" class="btn btn-secondary" style="flex:1">전체해제</button>
           </div>
           <button onclick="saveAttendanceForDate()" class="btn btn-primary" style="width:100%;margin-top:1rem">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 내부인원 투입시간 입력 모달 -->
+    <div id="internalAttendanceModal" class="modal" style="display:none">
+      <div class="modal-content modal-medium">
+        <div class="modal-header" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7)">
+          <h2 id="internalAttendanceModalTitle" style="color:#166534">내부인원 투입시간</h2>
+          <button onclick="closeInternalAttendanceModal()" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="internalAttendanceInputList" class="internal-attendance-input-list"></div>
+          <div style="margin-top:1rem;display:flex;gap:0.5rem">
+            <button onclick="setAllInternalHours(8)" class="btn btn-secondary" style="flex:1">전체 8시간</button>
+            <button onclick="setAllInternalHours(4)" class="btn btn-secondary" style="flex:1">전체 4시간</button>
+            <button onclick="setAllInternalHours(0)" class="btn btn-secondary" style="flex:1">전체 초기화</button>
+          </div>
+          <button onclick="saveInternalAttendanceForDate()" class="btn btn-add" style="width:100%;margin-top:1rem">저장</button>
         </div>
       </div>
     </div>

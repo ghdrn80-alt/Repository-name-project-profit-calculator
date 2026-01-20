@@ -443,6 +443,48 @@ function loadAttendanceData() {
   }
 }
 
+// ============ 내부인원 출근부 데이터 저장/불러오기 ============
+
+// 내부인원 출근부 데이터 저장
+function saveInternalAttendanceData(data) {
+  try {
+    const ss = getSpreadsheet();
+    let sheet = ss.getSheetByName('내부인원출근부');
+
+    if (!sheet) {
+      sheet = ss.insertSheet('내부인원출근부');
+    }
+
+    sheet.clear();
+    sheet.getRange('A1').setValue(JSON.stringify(data));
+
+    return { success: true, message: '내부인원 출근부 저장됨' };
+  } catch (e) {
+    return { success: false, message: e.toString() };
+  }
+}
+
+// 내부인원 출근부 데이터 불러오기
+function loadInternalAttendanceData() {
+  try {
+    const ss = getSpreadsheet();
+    const sheet = ss.getSheetByName('내부인원출근부');
+
+    if (!sheet) {
+      return { success: true, data: { records: {} } };
+    }
+
+    const value = sheet.getRange('A1').getValue();
+    if (!value) {
+      return { success: true, data: { records: {} } };
+    }
+
+    return { success: true, data: JSON.parse(value) };
+  } catch (e) {
+    return { success: false, message: e.toString() };
+  }
+}
+
 function createExternalWorkerTemplate() {
   try {
     const ss = getSpreadsheet();

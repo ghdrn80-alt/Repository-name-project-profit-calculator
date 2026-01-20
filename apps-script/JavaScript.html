@@ -1696,17 +1696,23 @@ function confirmLoadWorkersFromSpreadsheet() {
 function switchMainTab(tab) {
   document.querySelectorAll('.main-tab').forEach(btn => btn.classList.remove('active'));
   document.getElementById('calculatorTab').style.display = 'none';
-  document.getElementById('attendanceTab').style.display = 'none';
+  document.getElementById('externalAttendanceTab').style.display = 'none';
+  document.getElementById('internalAttendanceTab').style.display = 'none';
 
   if (tab === 'calculator') {
-    document.querySelector('.main-tab:first-child').classList.add('active');
+    document.querySelector('[data-tab="calculator"]').classList.add('active');
     document.getElementById('calculatorTab').style.display = 'grid';
     // 손익계산기로 전환 시 출근부 데이터 자동 연동
     autoSyncAttendanceToWorkers();
-  } else {
-    document.querySelector('.main-tab:last-child').classList.add('active');
-    document.getElementById('attendanceTab').style.display = 'block';
+    autoSyncInternalAttendanceToWorkers();
+  } else if (tab === 'external') {
+    document.querySelector('[data-tab="external"]').classList.add('active');
+    document.getElementById('externalAttendanceTab').style.display = 'block';
     initAttendance();
+  } else if (tab === 'internal') {
+    document.querySelector('[data-tab="internal"]').classList.add('active');
+    document.getElementById('internalAttendanceTab').style.display = 'block';
+    initInternalAttendance();
   }
 }
 
@@ -2142,5 +2148,336 @@ function loadAttendanceData() {
     })
     .withFailureHandler(err => console.error(err))
     .loadAttendanceData();
+}
+
+// ============ 내부인원 출근부 ============
+
+// 내부인원 출근부 데이터 모델
+let internalAttendanceData = {
+  records: {}  // { "2026-01-15": { "emp_id1": 8, "emp_id2": 4 } } - 시간 단위
+};
+
+let currentInternalAttendanceMonth = new Date().getMonth() + 1;
+let selectedInternalAttendanceDate = null;
+
+function initInternalAttendance() {
+  document.getElementById('internalAttendanceMonth').value = currentInternalAttendanceMonth;
+  loadInternalAttendanceData();
+}
+
+// 내부인원 달력 렌더링
+function renderInternalAttendanceCalendar() {
+  const month = parseInt(document.getElementById('internalAttendanceMonth').value);
+  currentInternalAttendanceMonth = month;
+  const year = 2026;
+
+  const container = document.getElementById('internalAttendanceCalendar');
+
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+  const daysInMonth = lastDay.getDate();
+  const startDayOfWeek = firstDay.getDay();
+
+  const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+  let html = '<div class="calendar-grid">';
+  html += weekdays.map((d, i) => `<div class="calendar-header ${i === 0 ? 'sunday' : ''} ${i === 6 ? 'saturday' : ''}">${d}</div>`).join('');
+
+  for (let i = 0; i < startDayOfWeek; i++) {
+    html += '<div class="calendar-cell empty"></div>';
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dayOfWeek = (startDayOfWeek + day - 1) % 7;
+    const isSunday = dayOfWeek === 0;
+    const isSaturday = dayOfWeek === 6;
+
+    const dayRecords = internalAttendanceData.records[dateStr] || {};
+    const workerCount = Object.keys(dayRecords).length;
+    const totalHours = Object.values(dayRecords).reduce((sum, h) => sum + (h || 0), 0);
+
+    const workerNames = Object.keys(dayRecords)
+      .map(empId => employeeMaster.find(e => e.id === empId))
+      .filter(e => e)
+      .map(e => e.personName)
+      .slice(0, 2);
+
+    html += `
+      <div class="calendar-cell ${isSunday ? 'sunday' : ''} ${isSaturday ? 'saturday' : ''} ${workerCount > 0 ? 'has-workers internal' : ''}"
+           onclick="openInternalAttendanceModal('${dateStr}')">
+        <div class="calendar-day">${day}</div>
+        ${workerCount > 0 ? `
+          <div class="calendar-workers">
+            ${workerNames.join(', ')}${workerCount > 2 ? ` 외 ${workerCount - 2}명` : ''}
+          </div>
+          <div class="calendar-count internal">${totalHours}h</div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  html += '</div>';
+  container.innerHTML = html;
+
+  renderInternalAttendanceSummary();
+}
+
+// 내부인원 출근 모달 열기
+function openInternalAttendanceModal(dateStr) {
+  selectedInternalAttendanceDate = dateStr;
+  const [year, month, day] = dateStr.split('-');
+  document.getElementById('internalAttendanceModalTitle').textContent = `${month}월 ${parseInt(day)}일 내부인원 투입시간`;
+
+  const existingRecords = internalAttendanceData.records[dateStr] || {};
+
+  if (employeeMaster.length === 0) {
+    document.getElementById('internalAttendanceInputList').innerHTML = '<p class="empty-message">먼저 직원관리에서 직원을 추가하세요</p>';
+  } else {
+    const inputs = employeeMaster.map(emp => {
+      const hours = existingRecords[emp.id] || 0;
+      const dailyRate = emp.monthlySalary / (emp.workingDaysPerMonth || 22);
+      return `
+        <div class="internal-attendance-input-item">
+          <span class="emp-info">
+            <strong>${emp.personName}</strong>
+            <span class="emp-detail">${emp.rank || ''} | 일당 ${formatNumber(Math.round(dailyRate))}원</span>
+          </span>
+          <div class="hours-input">
+            <input type="number" min="0" max="24" step="0.5" value="${hours}" data-emp-id="${emp.id}" placeholder="0">
+            <span>시간</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+    document.getElementById('internalAttendanceInputList').innerHTML = inputs;
+  }
+
+  document.getElementById('internalAttendanceModal').style.display = 'flex';
+}
+
+function closeInternalAttendanceModal() {
+  document.getElementById('internalAttendanceModal').style.display = 'none';
+  selectedInternalAttendanceDate = null;
+}
+
+function setAllInternalHours(hours) {
+  document.querySelectorAll('#internalAttendanceInputList input[type="number"]').forEach(input => {
+    input.value = hours;
+  });
+}
+
+function saveInternalAttendanceForDate() {
+  if (!selectedInternalAttendanceDate) return;
+
+  const records = {};
+  document.querySelectorAll('#internalAttendanceInputList input[type="number"]').forEach(input => {
+    const empId = input.dataset.empId;
+    const hours = parseFloat(input.value) || 0;
+    if (hours > 0) {
+      records[empId] = hours;
+    }
+  });
+
+  if (Object.keys(records).length > 0) {
+    internalAttendanceData.records[selectedInternalAttendanceDate] = records;
+  } else {
+    delete internalAttendanceData.records[selectedInternalAttendanceDate];
+  }
+
+  closeInternalAttendanceModal();
+  renderInternalAttendanceCalendar();
+  saveInternalAttendanceData();
+  showStatus('내부인원 출근 기록 저장됨');
+}
+
+// 내부인원 월별 집계
+function renderInternalAttendanceSummary() {
+  const month = currentInternalAttendanceMonth;
+  const year = 2026;
+  const container = document.getElementById('internalAttendanceSummary');
+
+  // 직원별 투입시간 집계
+  const summary = {};
+  employeeMaster.forEach(emp => {
+    summary[emp.id] = { employee: emp, totalHours: 0 };
+  });
+
+  Object.entries(internalAttendanceData.records).forEach(([dateStr, dayRecords]) => {
+    const [y, m] = dateStr.split('-').map(Number);
+    if (y === year && m === month) {
+      Object.entries(dayRecords).forEach(([empId, hours]) => {
+        if (summary[empId]) {
+          summary[empId].totalHours += hours;
+        }
+      });
+    }
+  });
+
+  const rows = Object.values(summary)
+    .filter(s => s.totalHours > 0)
+    .map(s => {
+      const emp = s.employee;
+      const dailyRate = emp.monthlySalary / (emp.workingDaysPerMonth || 22);
+      const hourlyRate = dailyRate / (emp.hoursPerDay || 8);
+      const baseCost = hourlyRate * s.totalHours;
+      const overhead = baseCost * ((emp.overheadRate || 15) / 100);
+      const totalCost = baseCost + overhead;
+      const md = s.totalHours / (emp.hoursPerDay || 8);
+
+      return `
+        <tr>
+          <td>${emp.personName}</td>
+          <td>${emp.rank || '-'}</td>
+          <td class="text-right">${formatNumber(emp.monthlySalary)}원</td>
+          <td class="text-center">${s.totalHours}h</td>
+          <td class="text-center">${md.toFixed(1)}</td>
+          <td class="text-right worker-subtotal">${formatNumber(Math.round(totalCost))}원</td>
+        </tr>
+      `;
+    });
+
+  // 총계
+  const totalHours = Object.values(summary).reduce((sum, s) => sum + s.totalHours, 0);
+  const totalCost = Object.values(summary).reduce((sum, s) => {
+    const emp = s.employee;
+    const dailyRate = emp.monthlySalary / (emp.workingDaysPerMonth || 22);
+    const hourlyRate = dailyRate / (emp.hoursPerDay || 8);
+    const baseCost = hourlyRate * s.totalHours;
+    const overhead = baseCost * ((emp.overheadRate || 15) / 100);
+    return sum + baseCost + overhead;
+  }, 0);
+  const totalMD = totalHours / 8;
+
+  if (rows.length === 0) {
+    container.innerHTML = '<p class="empty-message">등록된 내부인원 출근 기록이 없습니다</p>';
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="worker-table">
+      <thead>
+        <tr>
+          <th>이름</th>
+          <th>직급</th>
+          <th class="text-right">월급여</th>
+          <th class="text-center">투입시간</th>
+          <th class="text-center">M/D</th>
+          <th class="text-right">비용</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.join('')}
+        <tr class="summary-row">
+          <td colspan="3" style="text-align:right;font-weight:600">${month}월 합계</td>
+          <td class="text-center summary-value">${totalHours}h</td>
+          <td class="text-center summary-value">${totalMD.toFixed(1)}</td>
+          <td class="text-right summary-value">${formatNumber(Math.round(totalCost))}원</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+}
+
+// 내부인원 출근부 -> 손익계산기 연동
+function syncInternalAttendanceToWorkers() {
+  doSyncInternalAttendance();
+  showStatus('내부인원 공수표에 반영되었습니다');
+}
+
+function autoSyncInternalAttendanceToWorkers() {
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result.success && result.data) {
+        internalAttendanceData = result.data;
+        doSyncInternalAttendance();
+      }
+    })
+    .withFailureHandler(err => console.error(err))
+    .loadInternalAttendanceData();
+}
+
+function doSyncInternalAttendance() {
+  // 직원별 총 투입시간 계산
+  const empHours = {};
+  employeeMaster.forEach(emp => {
+    empHours[emp.id] = 0;
+  });
+
+  Object.values(internalAttendanceData.records).forEach(dayRecords => {
+    Object.entries(dayRecords).forEach(([empId, hours]) => {
+      if (empHours[empId] !== undefined) {
+        empHours[empId] += hours;
+      }
+    });
+  });
+
+  // 내부인원 공수표에 추가/업데이트
+  employeeMaster.forEach(emp => {
+    const hours = empHours[emp.id] || 0;
+
+    const existing = projectData.internalWorkers.find(
+      iw => iw.internalAttendanceId === emp.id
+    );
+
+    if (existing) {
+      existing.personName = emp.personName;
+      existing.rank = emp.rank;
+      existing.monthlySalary = emp.monthlySalary;
+      existing.workingDaysPerMonth = emp.workingDaysPerMonth || 22;
+      existing.overheadRate = emp.overheadRate || 15;
+      existing.projectHours = hours;
+    } else if (hours > 0) {
+      projectData.internalWorkers.push({
+        id: generateId(),
+        internalAttendanceId: emp.id,
+        employeeId: emp.id,
+        personName: emp.personName,
+        rank: emp.rank,
+        monthlySalary: emp.monthlySalary,
+        workingDaysPerMonth: emp.workingDaysPerMonth || 22,
+        overheadRate: emp.overheadRate || 15,
+        hoursPerDay: emp.hoursPerDay || 8,
+        projectHours: hours,
+        costCategory: 'wiring'
+      });
+    }
+  });
+
+  // 출근부에서 삭제된 직원은 공수표에서도 제거
+  const empIds = employeeMaster.map(e => e.id);
+  projectData.internalWorkers = projectData.internalWorkers.filter(iw => {
+    if (iw.internalAttendanceId) {
+      return empIds.includes(iw.internalAttendanceId);
+    }
+    return true;
+  });
+
+  renderInternalWorkers();
+  updateDashboard();
+}
+
+// 내부인원 출근부 저장
+function saveInternalAttendanceData() {
+  google.script.run
+    .withSuccessHandler(result => {
+      if (!result.success) {
+        showStatus('저장 실패: ' + result.message);
+      }
+    })
+    .withFailureHandler(err => console.error(err))
+    .saveInternalAttendanceData(internalAttendanceData);
+}
+
+// 내부인원 출근부 로드
+function loadInternalAttendanceData() {
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result.success && result.data) {
+        internalAttendanceData = result.data;
+      }
+      renderInternalAttendanceCalendar();
+    })
+    .withFailureHandler(err => console.error(err))
+    .loadInternalAttendanceData();
 }
 </script>

@@ -1620,6 +1620,96 @@ body {
   margin-top: 1rem;
 }
 
+/* 내부인원 출근부 스타일 */
+.internal-section {
+  border-left-color: #10b981 !important;
+}
+
+.external-section {
+  border-left-color: #3b82f6 !important;
+}
+
+.internal-info-box {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: #166534;
+}
+
+.calendar-cell.has-workers.internal {
+  background: linear-gradient(135deg, #f0fdf4, #bbf7d0);
+  border-color: #4ade80;
+}
+
+.calendar-count.internal {
+  background: #10b981;
+}
+
+/* 내부인원 투입시간 입력 모달 */
+.internal-attendance-input-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.internal-attendance-input-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 4px solid #10b981;
+}
+
+.internal-attendance-input-item .emp-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.internal-attendance-input-item .emp-info strong {
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
+.internal-attendance-input-item .emp-detail {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.internal-attendance-input-item .hours-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.internal-attendance-input-item .hours-input input {
+  width: 70px;
+  padding: 0.5rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 1rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.internal-attendance-input-item .hours-input input:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.internal-attendance-input-item .hours-input span {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
 /* 반응형 */
 @media (max-width: 1024px) {
   .attendance-worker-header-row,
