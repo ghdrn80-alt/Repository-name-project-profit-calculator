@@ -1334,6 +1334,71 @@ function removeProject(id) {
   updateProjectLoadSelect();
 }
 
+// 프로젝트 수정 모드
+let editingProjectId = null;
+
+function editProject(id) {
+  const project = projectMaster.find(p => p.id === id);
+  if (!project) return;
+
+  editingProjectId = id;
+
+  // 입력 필드에 값 채우기
+  document.getElementById('projCode').value = project.projectCode || '';
+  document.getElementById('projName').value = project.projectName || '';
+  document.getElementById('projClient').value = project.clientName || '';
+  document.getElementById('projDate').value = project.contractDate || '';
+  document.getElementById('projEstimate').value = project.originalEstimate ? formatNumber(project.originalEstimate) : '';
+  document.getElementById('projContract').value = project.contractAmount ? formatNumber(project.contractAmount) : '';
+  document.getElementById('projPersonnel').value = project.totalPersonnel || '';
+  document.getElementById('projManHours').value = project.estimatedManHours || '';
+
+  // 버튼 UI 변경
+  document.getElementById('projAddBtn').style.display = 'none';
+  document.getElementById('projEditBtns').style.display = 'flex';
+}
+
+function updateProject() {
+  if (!editingProjectId) return;
+
+  const project = projectMaster.find(p => p.id === editingProjectId);
+  if (!project) return;
+
+  project.projectCode = document.getElementById('projCode').value;
+  project.projectName = document.getElementById('projName').value;
+  project.clientName = document.getElementById('projClient').value;
+  project.contractDate = document.getElementById('projDate').value;
+  project.originalEstimate = parseNumber(document.getElementById('projEstimate').value);
+  project.contractAmount = parseNumber(document.getElementById('projContract').value);
+  project.totalPersonnel = Number(document.getElementById('projPersonnel').value) || 0;
+  project.estimatedManHours = Number(document.getElementById('projManHours').value) || 0;
+
+  cancelEditProject();
+  saveProjects();
+  renderProjectList();
+  updateProjectSelect();
+  updateProjectLoadSelect();
+  showStatus('프로젝트 수정됨');
+}
+
+function cancelEditProject() {
+  editingProjectId = null;
+
+  // 입력 필드 초기화
+  document.getElementById('projCode').value = '';
+  document.getElementById('projName').value = '';
+  document.getElementById('projClient').value = '';
+  document.getElementById('projDate').value = '';
+  document.getElementById('projEstimate').value = '';
+  document.getElementById('projContract').value = '';
+  document.getElementById('projPersonnel').value = '';
+  document.getElementById('projManHours').value = '';
+
+  // 버튼 UI 복원
+  document.getElementById('projAddBtn').style.display = 'block';
+  document.getElementById('projEditBtns').style.display = 'none';
+}
+
 function renderProjectList() {
   const container = document.getElementById('projectList');
   if (!container) return;
@@ -1348,7 +1413,10 @@ function renderProjectList() {
       <span class="project-contract">${p.contractAmount ? formatNumber(p.contractAmount) : '-'}</span>
       <span class="project-personnel">${p.totalPersonnel || '-'}</span>
       <span class="project-manhours">${p.estimatedManHours || '-'}</span>
-      <button class="btn btn-danger" onclick="removeProject('${p.id}')">삭제</button>
+      <div class="project-actions">
+        <button class="btn btn-edit" onclick="editProject('${p.id}')">수정</button>
+        <button class="btn btn-danger" onclick="removeProject('${p.id}')">삭제</button>
+      </div>
     </div>
   `).join('');
 }

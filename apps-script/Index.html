@@ -390,7 +390,11 @@
             <input type="number" id="projContract" placeholder="계약금액">
             <input type="number" id="projPersonnel" placeholder="총 투입 인원">
             <input type="number" id="projManHours" placeholder="예상 공수(M/H)">
-            <button onclick="addProject()" class="btn btn-add" style="grid-column: span 2">프로젝트 추가</button>
+            <button id="projAddBtn" onclick="addProject()" class="btn btn-add" style="grid-column: span 2">프로젝트 추가</button>
+            <div id="projEditBtns" style="display:none; grid-column: span 2; gap: 0.5rem;">
+              <button onclick="updateProject()" class="btn btn-primary">수정 저장</button>
+              <button onclick="cancelEditProject()" class="btn btn-secondary">취소</button>
+            </div>
           </div>
           <div class="project-list-header-extended">
             <span>코드</span>
