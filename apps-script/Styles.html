@@ -751,6 +751,111 @@ body {
   font-size: 0.8rem;
 }
 
+/* 프로젝트 관리 확장 스타일 */
+.modal-large {
+  max-width: 1000px;
+}
+
+.project-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #fef3c7;
+  border-radius: 8px;
+}
+
+.project-form-grid input {
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.project-list-header-extended {
+  display: grid;
+  grid-template-columns: 100px 1fr 120px 100px 100px 100px 60px;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 0.5rem;
+}
+
+.project-item-extended {
+  display: grid;
+  grid-template-columns: 100px 1fr 120px 100px 100px 100px 60px;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  align-items: center;
+  font-size: 0.85rem;
+  border-left: 4px solid #d97706;
+  margin-bottom: 0.5rem;
+}
+
+.project-item-extended .project-code {
+  font-weight: 600;
+  color: #92400e;
+}
+
+.project-item-extended .project-name {
+  color: #1e293b;
+}
+
+.project-item-extended .project-client {
+  color: #64748b;
+}
+
+.project-item-extended .project-date {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.project-item-extended .project-estimate,
+.project-item-extended .project-contract {
+  text-align: right;
+  font-size: 0.8rem;
+  color: #1e293b;
+}
+
+/* 프로젝트 정보 섹션 헤더 */
+.section-header-with-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.section-header-with-action h2 {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.project-load-section select {
+  padding: 0.5rem 1rem;
+  border: 2px solid #d97706;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: white;
+  color: #92400e;
+  font-weight: 500;
+  cursor: pointer;
+  min-width: 200px;
+}
+
+.project-load-section select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2);
+}
+
 /* 출근부 인원 프로젝트 선택 */
 .attendance-worker-item select.project-select {
   padding: 0.5rem 0.75rem;

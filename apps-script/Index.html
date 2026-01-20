@@ -34,7 +34,14 @@
       <div class="forms-container">
         <!-- 프로젝트 정보 -->
         <section class="form-section">
-          <h2>프로젝트 정보</h2>
+          <div class="section-header-with-action">
+            <h2>프로젝트 정보</h2>
+            <div class="project-load-section">
+              <select id="projectLoadSelect" onchange="loadProjectInfo(this.value)">
+                <option value="">-- 프로젝트 불러오기 --</option>
+              </select>
+            </div>
+          </div>
           <div class="form-grid">
             <div class="form-group">
               <label>프로젝트명</label>
@@ -368,22 +375,28 @@
 
     <!-- 프로젝트 관리 모달 -->
     <div id="projectModal" class="modal" style="display:none">
-      <div class="modal-content">
+      <div class="modal-content modal-large">
         <div class="modal-header" style="background:linear-gradient(135deg,#fef3c7,#fde68a)">
           <h2 style="color:#92400e">프로젝트 관리</h2>
           <button onclick="closeProjectModal()" class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
-          <div class="project-form">
-            <input type="text" id="projCode" placeholder="프로젝트 코드">
-            <input type="text" id="projName" placeholder="프로젝트명">
+          <div class="project-form-grid">
+            <input type="text" id="projCode" placeholder="프로젝트 코드 *">
+            <input type="text" id="projName" placeholder="프로젝트명 *">
+            <input type="text" id="projClient" placeholder="고객사">
             <input type="date" id="projDate" placeholder="계약일">
-            <button onclick="addProject()" class="btn btn-add">추가</button>
+            <input type="number" id="projEstimate" placeholder="원가 견적가">
+            <input type="number" id="projContract" placeholder="계약금액">
+            <button onclick="addProject()" class="btn btn-add" style="grid-column: span 2">프로젝트 추가</button>
           </div>
-          <div class="project-list-header">
-            <span>프로젝트코드</span>
+          <div class="project-list-header-extended">
+            <span>코드</span>
             <span>프로젝트명</span>
+            <span>고객사</span>
             <span>계약일</span>
+            <span>견적가</span>
+            <span>계약금액</span>
             <span></span>
           </div>
           <div id="projectList" class="project-list"></div>

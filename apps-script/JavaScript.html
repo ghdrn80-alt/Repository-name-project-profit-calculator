@@ -1237,6 +1237,7 @@ function loadProjects() {
       if (result.success) {
         projectMaster = result.data || [];
         updateProjectSelect();
+        updateProjectLoadSelect();
         renderProjectList();
       }
     })
@@ -1254,7 +1255,10 @@ function saveProjects() {
 function addProject() {
   const code = document.getElementById('projCode').value;
   const name = document.getElementById('projName').value;
+  const client = document.getElementById('projClient').value;
   const date = document.getElementById('projDate').value;
+  const estimate = Number(document.getElementById('projEstimate').value) || 0;
+  const contract = Number(document.getElementById('projContract').value) || 0;
 
   if (!code) {
     showStatus('프로젝트 코드를 입력하세요.');
@@ -1265,16 +1269,23 @@ function addProject() {
     id: generateId(),
     projectCode: code,
     projectName: name,
-    contractDate: date
+    clientName: client,
+    contractDate: date,
+    originalEstimate: estimate,
+    contractAmount: contract
   });
 
   document.getElementById('projCode').value = '';
   document.getElementById('projName').value = '';
+  document.getElementById('projClient').value = '';
   document.getElementById('projDate').value = '';
+  document.getElementById('projEstimate').value = '';
+  document.getElementById('projContract').value = '';
 
   saveProjects();
   renderProjectList();
   updateProjectSelect();
+  updateProjectLoadSelect();
 }
 
 function removeProject(id) {
@@ -1282,6 +1293,7 @@ function removeProject(id) {
   saveProjects();
   renderProjectList();
   updateProjectSelect();
+  updateProjectLoadSelect();
 }
 
 function renderProjectList() {
@@ -1289,10 +1301,13 @@ function renderProjectList() {
   if (!container) return;
 
   container.innerHTML = projectMaster.map(p => `
-    <div class="project-item">
+    <div class="project-item-extended">
       <span class="project-code">${p.projectCode}</span>
       <span class="project-name">${p.projectName || '-'}</span>
+      <span class="project-client">${p.clientName || '-'}</span>
       <span class="project-date">${p.contractDate || '-'}</span>
+      <span class="project-estimate">${p.originalEstimate ? formatNumber(p.originalEstimate) : '-'}</span>
+      <span class="project-contract">${p.contractAmount ? formatNumber(p.contractAmount) : '-'}</span>
       <button class="btn btn-danger" onclick="removeProject('${p.id}')">삭제</button>
     </div>
   `).join('');
@@ -1308,6 +1323,41 @@ function updateProjectSelect() {
     select.innerHTML = options;
     select.value = currentValue;
   });
+}
+
+// 프로젝트 정보 불러오기 셀렉트 업데이트
+function updateProjectLoadSelect() {
+  const select = document.getElementById('projectLoadSelect');
+  if (!select) return;
+
+  select.innerHTML = '<option value="">-- 프로젝트 불러오기 --</option>' +
+    projectMaster.map(p => `<option value="${p.id}">${p.projectCode} - ${p.projectName || ''}</option>`).join('');
+}
+
+// 프로젝트 정보 불러오기
+function loadProjectInfo(projectId) {
+  if (!projectId) return;
+
+  const project = projectMaster.find(p => p.id === projectId);
+  if (!project) return;
+
+  // 프로젝트 정보 필드에 값 설정
+  setVal('projectName', project.projectName || '');
+  setVal('clientName', project.clientName || '');
+  setVal('originalEstimate', project.originalEstimate || '');
+  setVal('contractAmount', project.contractAmount || '');
+
+  // 데이터 모델 업데이트
+  projectData.projectInfo.projectName = project.projectName || '';
+  projectData.projectInfo.clientName = project.clientName || '';
+  projectData.projectInfo.originalEstimate = project.originalEstimate || 0;
+  projectData.projectInfo.contractAmount = project.contractAmount || 0;
+
+  updateDashboard();
+  showStatus(`프로젝트 "${project.projectCode}" 정보 불러옴`);
+
+  // 셀렉트 초기화
+  document.getElementById('projectLoadSelect').value = '';
 }
 
 // ============ 구글시트 연동 ============
