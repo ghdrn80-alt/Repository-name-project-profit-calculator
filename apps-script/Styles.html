@@ -1,0 +1,1662 @@
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f5f7fa;
+  color: #333;
+  line-height: 1.6;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.status-message {
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: #10b981;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Buttons */
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: white;
+  color: #2563eb;
+}
+
+.btn-primary:hover {
+  background: #f0f9ff;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.btn-add {
+  background: #10b981;
+  color: white;
+}
+
+.btn-add:hover {
+  background: #059669;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+.btn-employee {
+  background: #059669;
+  color: white;
+}
+
+.btn-employee:hover {
+  background: #047857;
+}
+
+.btn-project {
+  background: #d97706;
+  color: white;
+}
+
+.btn-project:hover {
+  background: #b45309;
+}
+
+/* Main Content */
+.main-content {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  flex: 1;
+}
+
+@media (max-width: 1200px) {
+  .main-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+.forms-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Form Section */
+.form-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #e2e8f0;
+}
+
+.form-section h2 {
+  font-size: 1.125rem;
+  color: #1e293b;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+/* Form Grid */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.form-group input,
+.form-group select {
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Workers List */
+.workers-list, .items-list {
+  margin-top: 1rem;
+}
+
+.worker-item, .list-item {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) auto;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  align-items: center;
+  border-left: 4px solid #3b82f6;
+}
+
+.worker-item input, .list-item input,
+.worker-item select, .list-item select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.worker-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.worker-field label {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.worker-cost {
+  font-weight: 700;
+  color: #1e293b;
+  background: #dbeafe;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Dashboard */
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: sticky;
+  top: 1.5rem;
+  height: fit-content;
+}
+
+.dashboard {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard h2 {
+  font-size: 1.125rem;
+  color: #1e293b;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.dashboard h3 {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+}
+
+/* Summary Cards */
+.summary-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.card {
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid;
+}
+
+.card.revenue {
+  background: #f0f9ff;
+  border-color: #2563eb;
+}
+
+.card.cost {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+
+.card.profit.positive {
+  background: #f0fdf4;
+  border-color: #10b981;
+}
+
+.card.profit.negative {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+
+.card-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.card-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.card-rate {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+
+/* Margin Status */
+.margin-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.margin-status.above {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.margin-status.below {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.margin-label {
+  font-weight: 500;
+}
+
+.margin-value {
+  font-weight: 700;
+}
+
+.margin-target {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+/* Estimate Comparison */
+.estimate-comparison {
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border: 1px solid #7dd3fc;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.estimate-comparison h3 {
+  font-size: 0.85rem;
+  color: #0369a1;
+  margin-bottom: 0.5rem;
+  text-transform: none;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.comparison-grid .comparison-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e0f2fe;
+}
+
+.comparison-grid .comparison-item.highlight.discount {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.comparison-grid .comparison-item.highlight.increase {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.comparison-grid .comparison-label {
+  font-size: 0.65rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.comparison-grid .comparison-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.comparison-grid .highlight.discount .comparison-value {
+  color: #dc2626;
+}
+
+.comparison-grid .highlight.increase .comparison-value {
+  color: #16a34a;
+}
+
+.comparison-rate {
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+/* Productivity Section */
+.productivity-section {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.productivity-section h3 {
+  margin-bottom: 1rem;
+  color: #475569;
+}
+
+.productivity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.productivity-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.productivity-item.highlight {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border-color: #93c5fd;
+}
+
+.productivity-label {
+  font-size: 0.7rem;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.productivity-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.productivity-item.highlight .productivity-value {
+  color: #1d4ed8;
+}
+
+/* Cost Breakdown */
+.cost-breakdown {
+  margin-bottom: 1.5rem;
+}
+
+.breakdown-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.breakdown-item .label {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.breakdown-item .value {
+  font-weight: 600;
+  color: #1e293b;
+  margin-right: 0.5rem;
+}
+
+.breakdown-item .percent {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  min-width: 50px;
+  text-align: right;
+}
+
+.breakdown-item.total {
+  border-top: 2px solid #e2e8f0;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  font-weight: 600;
+}
+
+.breakdown-item.total .label {
+  color: #1e293b;
+}
+
+.breakdown-item.total .value {
+  color: #2563eb;
+}
+
+/* Profit Bar */
+.profit-bar {
+  margin-top: 1rem;
+}
+
+.bar-container {
+  height: 28px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding-left: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: white;
+  transition: width 0.3s ease;
+}
+
+.revenue-bar {
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+}
+
+.cost-bar {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+/* Allocation Info */
+.allocation-info {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border-radius: 8px;
+  flex-wrap: wrap;
+  border: 1px solid #bae6fd;
+}
+
+.allocation-info span {
+  font-size: 0.875rem;
+  color: #0369a1;
+}
+
+.allocation-info strong {
+  font-weight: 700;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-small {
+  max-width: 400px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 2px solid #e2e8f0;
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+}
+
+.modal-header h2 {
+  font-size: 1.25rem;
+  color: #166534;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.75rem;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.close-btn:hover {
+  color: #dc2626;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.employee-form {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.employee-form input {
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  flex: 1;
+  min-width: 100px;
+}
+
+.employee-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.employee-item {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 80px 60px auto;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  align-items: center;
+  font-size: 0.875rem;
+  border-left: 4px solid #10b981;
+}
+
+/* 프로젝트 관리 스타일 */
+.project-form {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #fef3c7;
+  border-radius: 8px;
+}
+
+.project-form input {
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  flex: 1;
+  min-width: 100px;
+}
+
+.project-list-header {
+  display: grid;
+  grid-template-columns: 120px 1fr 120px auto;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 0.5rem;
+}
+
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.project-item {
+  display: grid;
+  grid-template-columns: 120px 1fr 120px auto;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  align-items: center;
+  font-size: 0.875rem;
+  border-left: 4px solid #d97706;
+}
+
+.project-item .project-code {
+  font-weight: 600;
+  color: #92400e;
+}
+
+.project-item .project-name {
+  color: #1e293b;
+}
+
+.project-item .project-date {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+/* 출근부 인원 프로젝트 선택 */
+.attendance-worker-item select.project-select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: white;
+  cursor: pointer;
+}
+
+.attendance-worker-item select.project-select:focus {
+  outline: none;
+  border-color: #d97706;
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.2);
+}
+
+/* Comparison Dashboard Table */
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.comparison-table th,
+.comparison-table td {
+  padding: 0.625rem 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.comparison-table th {
+  background: #f8fafc;
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.comparison-table .number {
+  text-align: right;
+}
+
+.comparison-table .positive {
+  color: #16a34a;
+}
+
+.comparison-table .negative {
+  color: #dc2626;
+}
+
+.comparison-table tr.over {
+  background: #fef2f2;
+}
+
+.comparison-table tr.under {
+  background: #f0fdf4;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.status-badge.under {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.over {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge.match {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+/* Category Colors */
+.category-design { border-left-color: #f59e0b !important; }
+.category-panel { border-left-color: #3b82f6 !important; }
+.category-wiring { border-left-color: #22c55e !important; }
+.category-setup { border-left-color: #a855f7 !important; }
+.category-other { border-left-color: #64748b !important; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .main-content {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .dashboard-container {
+    position: static;
+  }
+
+  .comparison-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .productivity-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============ 인원 관리 테이블 스타일 ============ */
+
+/* 탭 스타일 */
+.worker-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 0;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.worker-tab {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+
+.worker-tab:hover {
+  color: #2563eb;
+}
+
+.worker-tab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+  background: #f0f9ff;
+}
+
+.worker-tab-content {
+  display: none;
+  padding: 1.5rem 0;
+}
+
+.worker-tab-content.active {
+  display: block;
+}
+
+/* 인원 섹션 헤더 */
+.worker-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.worker-section-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.worker-section-header .header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.worker-section-header select {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  min-width: 150px;
+}
+
+/* 도움말 메시지 */
+.worker-help {
+  background: #eff6ff;
+  border-left: 4px solid #3b82f6;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.85rem;
+  color: #1e40af;
+}
+
+/* 테이블 스타일 */
+.worker-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.worker-table th {
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.8rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.worker-table th.text-right {
+  text-align: right;
+}
+
+.worker-table th.text-center {
+  text-align: center;
+}
+
+.worker-table td {
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.worker-table td.text-right {
+  text-align: right;
+}
+
+.worker-table td.text-center {
+  text-align: center;
+}
+
+.worker-table tr:hover {
+  background: #f8fafc;
+}
+
+.worker-table select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  background: white;
+  min-width: 100px;
+}
+
+.worker-table input[type="number"] {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  width: 80px;
+  text-align: center;
+}
+
+.worker-table input[type="number"]:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.worker-table .worker-name {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.worker-table .worker-rate {
+  color: #64748b;
+}
+
+.worker-table .worker-subtotal {
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+.worker-table .btn-danger {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+}
+
+/* 합계 행 */
+.worker-table tr.summary-row {
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+.worker-table tr.summary-row td {
+  border-top: 2px solid #e2e8f0;
+  padding-top: 1rem;
+  color: #1e293b;
+}
+
+.worker-table tr.summary-row .summary-value {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+/* 공수 인건비 총 합계 */
+.labor-cost-summary {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  border-left: 4px solid #2563eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.labor-cost-summary h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 1rem;
+}
+
+.labor-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.labor-summary-item {
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.labor-summary-item.highlight {
+  background: #1e40af;
+  border-color: #1e40af;
+  color: white;
+}
+
+.labor-summary-label {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.labor-summary-item.highlight .labor-summary-label {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.labor-summary-md {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.labor-summary-item.highlight .labor-summary-md {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.labor-summary-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.labor-summary-item.highlight .labor-summary-value {
+  color: white;
+}
+
+/* 비용 항목별 공수 집계 */
+.manhour-summary {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #e2e8f0;
+}
+
+.manhour-summary h4 {
+  font-size: 0.9rem;
+  color: #475569;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.category-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.category-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border-left: 4px solid;
+}
+
+.category-item.category-design {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+
+.category-item.category-panel {
+  background: #dbeafe;
+  border-color: #3b82f6;
+}
+
+.category-item.category-wiring {
+  background: #dcfce7;
+  border-color: #22c55e;
+}
+
+.category-item.category-setup {
+  background: #f3e8ff;
+  border-color: #a855f7;
+}
+
+.category-item.category-other {
+  background: #f1f5f9;
+  border-color: #64748b;
+}
+
+.category-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.category-detail {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.category-mandays {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.category-cost {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+/* Data Table (자재비, 외주가공비, 소모품비용) */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  margin-top: 1rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.data-table th {
+  background: #f8fafc;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.data-table th.text-right,
+.data-table td.text-right {
+  text-align: right;
+}
+
+.data-table th.text-center,
+.data-table td.text-center {
+  text-align: center;
+}
+
+.data-table tr:hover {
+  background: #f8fafc;
+}
+
+.data-table input[type="text"],
+.data-table input[type="number"] {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.data-table input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.data-table select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  background: white;
+}
+
+.data-table .subtotal {
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+.data-table tfoot td {
+  font-weight: 600;
+  background: #f8fafc;
+  border-top: 2px solid #e2e8f0;
+  padding-top: 1rem;
+}
+
+.data-table .total-label {
+  text-align: right;
+  color: #1e293b;
+}
+
+.data-table .total-value {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.empty-message {
+  color: #94a3b8;
+  text-align: center;
+  padding: 2rem;
+  font-style: italic;
+}
+
+/* 반응형 테이블 */
+@media (max-width: 768px) {
+  .worker-table {
+    font-size: 0.8rem;
+  }
+
+  .worker-table th,
+  .worker-table td {
+    padding: 0.5rem 0.25rem;
+  }
+
+  .labor-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .worker-section-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+}
+
+/* ============ 메인 탭 네비게이션 ============ */
+
+.main-tabs {
+  display: flex;
+  background: white;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 0 2rem;
+}
+
+.main-tab {
+  padding: 1rem 2rem;
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+
+.main-tab:hover {
+  color: #2563eb;
+  background: #f0f9ff;
+}
+
+.main-tab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+/* ============ 출근부 스타일 ============ */
+
+.attendance-view {
+  display: block !important;
+  padding: 1.5rem;
+}
+
+.attendance-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.attendance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.attendance-header h2 {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.attendance-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.attendance-controls select {
+  padding: 0.625rem 1rem;
+  border: 2px solid #2563eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2563eb;
+  background: white;
+  cursor: pointer;
+}
+
+.attendance-controls select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+/* 출근부 인원 목록 */
+.attendance-worker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.attendance-worker-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+.attendance-workers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.attendance-worker-header-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 120px 60px;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.attendance-worker-item {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 120px 60px;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+  align-items: center;
+}
+
+.attendance-worker-item input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.attendance-worker-item input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* 달력 스타일 */
+.calendar-section {
+  overflow-x: auto;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  min-width: 700px;
+}
+
+.calendar-header {
+  padding: 0.75rem;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.calendar-header.sunday {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.calendar-header.saturday {
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.calendar-cell {
+  min-height: 100px;
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-cell:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.calendar-cell.empty {
+  background: #f8fafc;
+  cursor: default;
+}
+
+.calendar-cell.empty:hover {
+  border-color: #e2e8f0;
+  box-shadow: none;
+}
+
+.calendar-cell.sunday {
+  background: #fef7f7;
+}
+
+.calendar-cell.saturday {
+  background: #f7faff;
+}
+
+.calendar-cell.has-workers {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border-color: #86efac;
+}
+
+.calendar-day {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.25rem;
+}
+
+.calendar-cell.sunday .calendar-day {
+  color: #dc2626;
+}
+
+.calendar-cell.saturday .calendar-day {
+  color: #2563eb;
+}
+
+.calendar-workers {
+  font-size: 0.75rem;
+  color: #16a34a;
+  line-height: 1.4;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-count {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  background: #16a34a;
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  align-self: flex-end;
+  margin-top: auto;
+}
+
+/* 출근자 선택 모달 */
+.modal-medium {
+  max-width: 500px;
+}
+
+.attendance-checkbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.attendance-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.attendance-checkbox-item:hover {
+  background: #eff6ff;
+}
+
+.attendance-checkbox-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.attendance-checkbox-item .worker-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.attendance-checkbox-item .worker-info strong {
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
+.attendance-checkbox-item .worker-detail {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* 월별 집계 */
+.attendance-summary {
+  margin-top: 1rem;
+}
+
+/* 반응형 */
+@media (max-width: 1024px) {
+  .attendance-worker-header-row,
+  .attendance-worker-item {
+    grid-template-columns: 1fr 1fr 1fr 100px 50px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-tabs {
+    padding: 0 1rem;
+  }
+
+  .main-tab {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .attendance-worker-header-row,
+  .attendance-worker-item {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .attendance-worker-header-row span:nth-child(3),
+  .attendance-worker-header-row span:nth-child(4),
+  .attendance-worker-item input:nth-child(3),
+  .attendance-worker-item input:nth-child(4) {
+    grid-column: span 1;
+  }
+
+  .calendar-grid {
+    min-width: 100%;
+    gap: 2px;
+  }
+
+  .calendar-cell {
+    min-height: 70px;
+    padding: 0.25rem;
+  }
+
+  .calendar-day {
+    font-size: 0.85rem;
+  }
+
+  .calendar-workers {
+    font-size: 0.65rem;
+  }
+
+  .calendar-count {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.3rem;
+  }
+}
+</style>

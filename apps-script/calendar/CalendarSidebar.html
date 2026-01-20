@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Malgun Gothic', sans-serif;
+      font-size: 14px;
+      padding: 16px;
+      background: #f8f9fa;
+    }
+
+    .header {
+      background: #4285f4;
+      color: white;
+      padding: 12px;
+      margin: -16px -16px 16px -16px;
+      text-align: center;
+    }
+
+    .header h2 {
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .cell-info {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .refresh-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    .refresh-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    .name-list {
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .name-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .name-item:last-child {
+      border-bottom: none;
+    }
+
+    .name-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+
+    .name-item label {
+      cursor: pointer;
+      flex: 1;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+
+    .btn-primary {
+      background: #4285f4;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #3367d6;
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #5a6268;
+    }
+
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #c82333;
+    }
+
+    .message {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+
+    .error {
+      background: #fee;
+      color: #c00;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+    }
+
+    .success {
+      background: #efe;
+      color: #060;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+
+    .select-all {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #4285f4;
+    }
+
+    .select-all button {
+      background: none;
+      border: 1px solid #4285f4;
+      color: #4285f4;
+      padding: 4px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .select-all button:hover {
+      background: #4285f4;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>출근자 선택</h2>
+    <div id="cellInfo" class="cell-info">셀을 선택하세요</div>
+    <button class="refresh-btn" onclick="refreshCellInfo()">🔄 셀 정보 새로고침</button>
+  </div>
+
+  <div id="messageArea"></div>
+
+  <div id="nameListContainer">
+    <div class="loading">이름 목록을 불러오는 중...</div>
+  </div>
+
+  <button class="btn btn-primary" onclick="saveSelection()">✓ 저장</button>
+  <button class="btn btn-danger" onclick="clearSelection()">✕ 비우기</button>
+
+  <script>
+    let names = [];
+    let existingNames = [];
+
+    // 초기 로드
+    window.onload = function() {
+      loadNames();
+      refreshCellInfo();
+    };
+
+    // 셀 정보 새로고침
+    function refreshCellInfo() {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          const info = result;
+          document.getElementById('cellInfo').innerHTML =
+            '선택된 셀: <strong>' + info.sheetName + '!' + info.address + '</strong>';
+          existingNames = info.existingNames || [];
+          updateCheckboxes();
+        })
+        .withFailureHandler(showError)
+        .getSelectedCellInfo();
+    }
+
+    // 이름 목록 불러오기
+    function loadNames() {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (!result.success) {
+            showError(result.message);
+            return;
+          }
+
+          names = result.data;
+
+          if (names.length === 0) {
+            document.getElementById('nameListContainer').innerHTML =
+              '<div class="message">시트1의 A열에 이름을 입력하세요.</div>';
+            return;
+          }
+
+          renderNameList();
+        })
+        .withFailureHandler(showError)
+        .getNameList();
+    }
+
+    // 이름 목록 렌더링
+    function renderNameList() {
+      let html = '<div class="select-all">' +
+        '<span>이름 목록 (' + names.length + '명)</span>' +
+        '<div>' +
+        '<button onclick="selectAll()">전체선택</button> ' +
+        '<button onclick="deselectAll()">전체해제</button>' +
+        '</div></div>';
+
+      html += '<div class="name-list">';
+
+      names.forEach(function(name, index) {
+        const checked = existingNames.includes(name) ? 'checked' : '';
+        html += '<div class="name-item">' +
+          '<input type="checkbox" id="name_' + index + '" value="' + escapeHtml(name) + '" ' + checked + '>' +
+          '<label for="name_' + index + '">' + escapeHtml(name) + '</label>' +
+          '</div>';
+      });
+
+      html += '</div>';
+
+      document.getElementById('nameListContainer').innerHTML = html;
+    }
+
+    // 체크박스 상태 업데이트
+    function updateCheckboxes() {
+      names.forEach(function(name, index) {
+        const checkbox = document.getElementById('name_' + index);
+        if (checkbox) {
+          checkbox.checked = existingNames.includes(name);
+        }
+      });
+    }
+
+    // 전체 선택
+    function selectAll() {
+      names.forEach(function(name, index) {
+        const checkbox = document.getElementById('name_' + index);
+        if (checkbox) checkbox.checked = true;
+      });
+    }
+
+    // 전체 해제
+    function deselectAll() {
+      names.forEach(function(name, index) {
+        const checkbox = document.getElementById('name_' + index);
+        if (checkbox) checkbox.checked = false;
+      });
+    }
+
+    // 선택 저장
+    function saveSelection() {
+      const selectedNames = [];
+
+      names.forEach(function(name, index) {
+        const checkbox = document.getElementById('name_' + index);
+        if (checkbox && checkbox.checked) {
+          selectedNames.push(name);
+        }
+      });
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showSuccess(result.message);
+          } else {
+            showError(result.message);
+          }
+        })
+        .withFailureHandler(showError)
+        .saveAttendance(selectedNames);
+    }
+
+    // 선택 비우기
+    function clearSelection() {
+      deselectAll();
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showSuccess('셀 내용이 비워졌습니다.');
+          } else {
+            showError(result.message);
+          }
+        })
+        .withFailureHandler(showError)
+        .saveAttendance([]);
+    }
+
+    // HTML 이스케이프
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // 에러 메시지 표시
+    function showError(message) {
+      document.getElementById('messageArea').innerHTML =
+        '<div class="error">' + message + '</div>';
+      setTimeout(function() {
+        document.getElementById('messageArea').innerHTML = '';
+      }, 5000);
+    }
+
+    // 성공 메시지 표시
+    function showSuccess(message) {
+      document.getElementById('messageArea').innerHTML =
+        '<div class="success">' + message + '</div>';
+      setTimeout(function() {
+        document.getElementById('messageArea').innerHTML = '';
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

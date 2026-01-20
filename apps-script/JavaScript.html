@@ -1,0 +1,2109 @@
+<script>
+// ============ 데이터 모델 ============
+
+const initialData = {
+  projectInfo: {
+    projectName: '',
+    clientName: '',
+    originalEstimate: 0,
+    contractAmount: 0,
+    totalPersonnel: 0,
+    estimatedManHours: 0
+  },
+  internalWorkers: [],
+  externalWorkers: [],
+  electricalMaterials: [],
+  travelExpense: { accommodationCost: 0, mealCost: 0, transportCost: 0 },
+  outsourcingCosts: [],
+  deliveryCost: { shippingCost: 0, packagingCost: 0 },
+  consumableCosts: [],
+  overheadAndMargin: { overheadRate: 10, warrantyReserveRate: 3, marginRate: 15 },
+  budgetAllocation: {
+    laborDesign: 0, laborPanel: 0, laborWiring: 0, laborSetup: 0, laborOther: 0,
+    electricalMaterial: 0, travelExpense: 0, outsourcingCost: 0,
+    deliveryCost: 0, consumableCost: 0, overhead: 0
+  }
+};
+
+let projectData = JSON.parse(JSON.stringify(initialData));
+let employeeMaster = [];
+let projectMaster = [];
+
+// ============ 초기화 ============
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadProject();
+  loadEmployees();
+  loadProjects();
+});
+
+// ============ 유틸리티 ============
+
+function generateId() {
+  return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+function formatNumber(num) {
+  return Math.round(num).toLocaleString('ko-KR');
+}
+
+function showStatus(message) {
+  const el = document.getElementById('statusMessage');
+  el.textContent = message;
+  setTimeout(() => el.textContent = '', 3000);
+}
+
+function getVal(id) {
+  return document.getElementById(id)?.value || '';
+}
+
+function getNum(id) {
+  return Number(document.getElementById(id)?.value) || 0;
+}
+
+function setVal(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.value = value;
+}
+
+// ============ 데이터 수집 ============
+
+function collectData() {
+  projectData.projectInfo = {
+    projectName: getVal('projectName'),
+    clientName: getVal('clientName'),
+    originalEstimate: getNum('originalEstimate'),
+    contractAmount: getNum('contractAmount'),
+    totalPersonnel: getNum('totalPersonnel'),
+    estimatedManHours: getNum('estimatedManHours')
+  };
+
+  projectData.travelExpense = {
+    accommodationCost: getNum('accommodationCost'),
+    mealCost: getNum('mealCost'),
+    transportCost: getNum('transportCost')
+  };
+
+  projectData.deliveryCost = {
+    shippingCost: getNum('shippingCost'),
+    packagingCost: getNum('packagingCost')
+  };
+
+  projectData.overheadAndMargin = {
+    overheadRate: getNum('overheadRate'),
+    warrantyReserveRate: getNum('warrantyReserveRate'),
+    marginRate: getNum('marginRate')
+  };
+
+  projectData.budgetAllocation = {
+    laborDesign: getNum('laborDesign'),
+    laborPanel: getNum('laborPanel'),
+    laborWiring: getNum('laborWiring'),
+    laborSetup: getNum('laborSetup'),
+    laborOther: getNum('laborOther'),
+    electricalMaterial: getNum('allocElectrical'),
+    travelExpense: getNum('allocTravel'),
+    outsourcingCost: getNum('allocOutsourcing'),
+    deliveryCost: getNum('allocDelivery'),
+    consumableCost: getNum('allocConsumable'),
+    overhead: getNum('allocOverhead')
+  };
+}
+
+function populateForm() {
+  const p = projectData.projectInfo;
+  setVal('projectName', p.projectName);
+  setVal('clientName', p.clientName);
+  setVal('originalEstimate', p.originalEstimate);
+  setVal('contractAmount', p.contractAmount);
+  setVal('totalPersonnel', p.totalPersonnel);
+  setVal('estimatedManHours', p.estimatedManHours);
+
+  const t = projectData.travelExpense;
+  setVal('accommodationCost', t.accommodationCost);
+  setVal('mealCost', t.mealCost);
+  setVal('transportCost', t.transportCost);
+
+  const d = projectData.deliveryCost;
+  setVal('shippingCost', d.shippingCost);
+  setVal('packagingCost', d.packagingCost);
+
+  const o = projectData.overheadAndMargin;
+  setVal('overheadRate', o.overheadRate);
+  setVal('warrantyReserveRate', o.warrantyReserveRate);
+  setVal('marginRate', o.marginRate);
+
+  const b = projectData.budgetAllocation;
+  setVal('laborDesign', b.laborDesign);
+  setVal('laborPanel', b.laborPanel);
+  setVal('laborWiring', b.laborWiring);
+  setVal('laborSetup', b.laborSetup);
+  setVal('laborOther', b.laborOther);
+  setVal('allocElectrical', b.electricalMaterial);
+  setVal('allocTravel', b.travelExpense);
+  setVal('allocOutsourcing', b.outsourcingCost);
+  setVal('allocDelivery', b.deliveryCost);
+  setVal('allocConsumable', b.consumableCost);
+  setVal('allocOverhead', b.overhead);
+
+  renderInternalWorkers();
+  renderExternalWorkers();
+  renderMaterials();
+  renderOutsourcing();
+  renderConsumables();
+  updateEmployeeSelect();
+}
+
+function updateData() {
+  collectData();
+  updateDashboard();
+}
+
+// ============ 내부 인원 ============
+
+function addInternalWorker() {
+  const select = document.getElementById('employeeSelect');
+  const empId = select.value;
+
+  if (!empId) {
+    // 빈 인원 추가
+    projectData.internalWorkers.push({
+      id: generateId(),
+      personName: '',
+      rank: '',
+      monthlySalary: 0,
+      workingDaysPerMonth: 22,
+      overheadRate: 15,
+      hoursPerDay: 8,
+      projectHours: 0,
+      costCategory: 'wiring'
+    });
+  } else {
+    const emp = employeeMaster.find(e => e.id === empId);
+    if (emp) {
+      projectData.internalWorkers.push({
+        id: generateId(),
+        employeeId: emp.id,
+        personName: emp.personName,
+        rank: emp.rank,
+        monthlySalary: emp.monthlySalary,
+        workingDaysPerMonth: emp.workingDaysPerMonth || 22,
+        overheadRate: emp.overheadRate || 15,
+        hoursPerDay: 8,
+        projectHours: 0,
+        costCategory: 'wiring'
+      });
+    }
+  }
+
+  select.value = '';
+  renderInternalWorkers();
+  updateDashboard();
+}
+
+function updateInternalWorker(id, field, value) {
+  const worker = projectData.internalWorkers.find(w => w.id === id);
+  if (worker) {
+    if (['monthlySalary', 'workingDaysPerMonth', 'overheadRate', 'hoursPerDay', 'projectHours'].includes(field)) {
+      worker[field] = Number(value) || 0;
+    } else {
+      worker[field] = value;
+    }
+    renderInternalWorkers();
+    updateDashboard();
+  }
+}
+
+function removeInternalWorker(id) {
+  projectData.internalWorkers = projectData.internalWorkers.filter(w => w.id !== id);
+  renderInternalWorkers();
+  updateDashboard();
+}
+
+function calculateInternalWorkerCost(worker) {
+  const dailyRate = worker.monthlySalary / worker.workingDaysPerMonth;
+  const hourlyRate = dailyRate / worker.hoursPerDay;
+  const baseCost = hourlyRate * worker.projectHours;
+  const overhead = baseCost * (worker.overheadRate / 100);
+  return baseCost + overhead;
+}
+
+function calculateInternalWorkerMD(worker) {
+  // 투입시간을 M/D로 환산 (8시간 = 1일)
+  return worker.projectHours / (worker.hoursPerDay || 8);
+}
+
+const COST_CATEGORY_OPTIONS = {
+  design: '전장설계비',
+  panel: '판넬 제작비',
+  wiring: '기체 배선비',
+  setup: '셋업/시운전',
+  other: '기타'
+};
+
+function renderInternalWorkers() {
+  const container = document.getElementById('internalWorkersList');
+  document.getElementById('internalWorkerCount').textContent = projectData.internalWorkers.length;
+
+  if (projectData.internalWorkers.length === 0) {
+    container.innerHTML = '<p style="color:#64748b;text-align:center;padding:2rem">내부 인원을 추가하세요</p>';
+    renderLaborCostSummary();
+    return;
+  }
+
+  // 합계 계산
+  let totalHours = 0;
+  let totalMD = 0;
+  let totalCost = 0;
+
+  const rows = projectData.internalWorkers.map(w => {
+    const cost = calculateInternalWorkerCost(w);
+    const md = calculateInternalWorkerMD(w);
+    const dailyRate = w.monthlySalary / w.workingDaysPerMonth;
+
+    totalHours += w.projectHours || 0;
+    totalMD += md;
+    totalCost += cost;
+
+    return `
+      <tr>
+        <td>
+          <select onchange="updateInternalWorker('${w.id}','costCategory',this.value)">
+            ${Object.entries(COST_CATEGORY_OPTIONS).map(([k, v]) =>
+              `<option value="${k}" ${w.costCategory===k?'selected':''}>${v}</option>`
+            ).join('')}
+          </select>
+        </td>
+        <td class="worker-name">${w.personName || '-'}</td>
+        <td class="worker-rate">${formatNumber(Math.round(dailyRate))}</td>
+        <td class="text-center">
+          <input type="number" value="${w.projectHours || 0}" onchange="updateInternalWorker('${w.id}','projectHours',this.value)">
+        </td>
+        <td class="text-center">${md.toFixed(1)}</td>
+        <td class="text-right worker-subtotal">${formatNumber(Math.round(cost))}원</td>
+        <td class="text-center">
+          <button class="btn btn-danger" onclick="removeInternalWorker('${w.id}')">삭제</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <table class="worker-table">
+      <thead>
+        <tr>
+          <th>비용 항목</th>
+          <th>이름</th>
+          <th>일당</th>
+          <th class="text-center">투입시간</th>
+          <th class="text-center">M/D</th>
+          <th class="text-right">소계</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+        <tr class="summary-row">
+          <td colspan="3" style="text-align:right;font-weight:600">내부 인원 합계</td>
+          <td class="text-center summary-value">${totalHours}h</td>
+          <td class="text-center summary-value">${totalMD.toFixed(1)}</td>
+          <td class="text-right summary-value">${formatNumber(Math.round(totalCost))}원</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+
+  renderLaborCostSummary();
+}
+
+// ============ 외부 인원 ============
+
+function addExternalWorker() {
+  projectData.externalWorkers.push({
+    id: generateId(),
+    personName: '',
+    company: '',
+    rank: '',
+    dailyRate: 0,
+    projectManDays: 0,
+    totalManDays: 0,
+    costCategory: 'wiring',
+    monthlyManDays: [],
+    dailyManDaysPerMonth: []
+  });
+  renderExternalWorkers();
+  updateDashboard();
+}
+
+function updateExternalWorker(id, field, value) {
+  const worker = projectData.externalWorkers.find(w => w.id === id);
+  if (worker) {
+    if (['dailyRate', 'projectManDays', 'totalManDays'].includes(field)) {
+      worker[field] = Number(value) || 0;
+    } else {
+      worker[field] = value;
+    }
+    renderExternalWorkers();
+    updateDashboard();
+  }
+}
+
+function removeExternalWorker(id) {
+  projectData.externalWorkers = projectData.externalWorkers.filter(w => w.id !== id);
+  renderExternalWorkers();
+  updateDashboard();
+}
+
+function calculateExternalWorkerCost(worker) {
+  return worker.dailyRate * worker.projectManDays;
+}
+
+function renderExternalWorkers() {
+  const container = document.getElementById('externalWorkersList');
+  document.getElementById('externalWorkerCount').textContent = projectData.externalWorkers.length;
+
+  if (projectData.externalWorkers.length === 0) {
+    container.innerHTML = '<p style="color:#64748b;text-align:center;padding:2rem">외부 인원을 추가하세요</p>';
+    renderLaborCostSummary();
+    return;
+  }
+
+  // 합계 계산
+  let totalMD = 0;
+  let totalCost = 0;
+
+  const rows = projectData.externalWorkers.map(w => {
+    const cost = calculateExternalWorkerCost(w);
+    totalMD += w.projectManDays || 0;
+    totalCost += cost;
+
+    return `
+      <tr>
+        <td>
+          <select onchange="updateExternalWorker('${w.id}','costCategory',this.value)">
+            ${Object.entries(COST_CATEGORY_OPTIONS).map(([k, v]) =>
+              `<option value="${k}" ${w.costCategory===k?'selected':''}>${v}</option>`
+            ).join('')}
+          </select>
+        </td>
+        <td class="worker-name">${w.personName || '-'}</td>
+        <td>${w.company || '-'}</td>
+        <td class="worker-rate">${formatNumber(w.dailyRate)}</td>
+        <td class="text-center">
+          <input type="number" value="${w.projectManDays || 0}" onchange="updateExternalWorker('${w.id}','projectManDays',this.value)">
+        </td>
+        <td class="text-right worker-subtotal">${formatNumber(Math.round(cost))}원</td>
+        <td class="text-center">
+          <button class="btn btn-danger" onclick="removeExternalWorker('${w.id}')">삭제</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <table class="worker-table">
+      <thead>
+        <tr>
+          <th>비용 항목</th>
+          <th>이름</th>
+          <th>업체명</th>
+          <th>일당</th>
+          <th class="text-center">투입일수(M/D)</th>
+          <th class="text-right">소계</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+        <tr class="summary-row">
+          <td colspan="4" style="text-align:right;font-weight:600">외부 인원 합계</td>
+          <td class="text-center summary-value">${totalMD.toFixed(1)}</td>
+          <td class="text-right summary-value">${formatNumber(Math.round(totalCost))}원</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+
+  renderLaborCostSummary();
+}
+
+// ============ 탭 전환 및 인건비 요약 ============
+
+function switchWorkerTab(tab) {
+  // 탭 버튼 활성화
+  document.querySelectorAll('.worker-tab').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.worker-tab-content').forEach(content => content.classList.remove('active'));
+
+  if (tab === 'internal') {
+    document.querySelector('.worker-tab:first-child').classList.add('active');
+    document.getElementById('internalTab').classList.add('active');
+  } else {
+    document.querySelector('.worker-tab:last-child').classList.add('active');
+    document.getElementById('externalTab').classList.add('active');
+  }
+}
+
+function renderLaborCostSummary() {
+  const container = document.getElementById('laborCostSummary');
+
+  // 내부 인원 합계
+  let internalMD = 0;
+  let internalCost = 0;
+  projectData.internalWorkers.forEach(w => {
+    internalMD += calculateInternalWorkerMD(w);
+    internalCost += calculateInternalWorkerCost(w);
+  });
+
+  // 외부 인원 합계
+  let externalMD = 0;
+  let externalCost = 0;
+  projectData.externalWorkers.forEach(w => {
+    externalMD += w.projectManDays || 0;
+    externalCost += calculateExternalWorkerCost(w);
+  });
+
+  const totalMD = internalMD + externalMD;
+  const totalCost = internalCost + externalCost;
+
+  // 비용 항목별 집계
+  const categoryStats = {};
+  Object.keys(COST_CATEGORY_OPTIONS).forEach(cat => {
+    categoryStats[cat] = { intMD: 0, extMD: 0, intCost: 0, extCost: 0 };
+  });
+
+  projectData.internalWorkers.forEach(w => {
+    const cat = w.costCategory || 'wiring';
+    categoryStats[cat].intMD += calculateInternalWorkerMD(w);
+    categoryStats[cat].intCost += calculateInternalWorkerCost(w);
+  });
+
+  projectData.externalWorkers.forEach(w => {
+    const cat = w.costCategory || 'wiring';
+    categoryStats[cat].extMD += w.projectManDays || 0;
+    categoryStats[cat].extCost += calculateExternalWorkerCost(w);
+  });
+
+  // 비용 항목별 HTML 생성
+  let categorySummaryHtml = '';
+  const hasAnyData = projectData.internalWorkers.length > 0 || projectData.externalWorkers.length > 0;
+
+  if (hasAnyData) {
+    const categoryItems = Object.entries(COST_CATEGORY_OPTIONS)
+      .map(([key, label]) => {
+        const stat = categoryStats[key];
+        const totalMD = stat.intMD + stat.extMD;
+        const totalCategoryCost = stat.intCost + stat.extCost;
+        if (totalMD === 0 && totalCategoryCost === 0) return '';
+        return `
+          <div class="category-item category-${key}">
+            <span class="category-label">${label}</span>
+            <span class="category-detail">내부 ${stat.intMD.toFixed(1)} + 외부 ${stat.extMD.toFixed(1)}</span>
+            <span class="category-mandays">${totalMD.toFixed(1)} M/D</span>
+            <span class="category-cost">${formatNumber(Math.round(totalCategoryCost))}원</span>
+          </div>
+        `;
+      })
+      .filter(item => item)
+      .join('');
+
+    if (categoryItems) {
+      categorySummaryHtml = `
+        <div class="manhour-summary">
+          <h4>비용 항목별 공수 집계</h4>
+          <div class="category-summary">
+            ${categoryItems}
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  container.innerHTML = `
+    <h3>공수 인건비 총 합계</h3>
+    <div class="labor-summary-grid">
+      <div class="labor-summary-item">
+        <div class="labor-summary-label">내부 인원</div>
+        <div class="labor-summary-md">${internalMD.toFixed(1)} M/D</div>
+        <div class="labor-summary-value">${formatNumber(Math.round(internalCost))}원</div>
+      </div>
+      <div class="labor-summary-item">
+        <div class="labor-summary-label">외부 인원</div>
+        <div class="labor-summary-md">${externalMD.toFixed(1)} M/D</div>
+        <div class="labor-summary-value">${formatNumber(Math.round(externalCost))}원</div>
+      </div>
+      <div class="labor-summary-item highlight">
+        <div class="labor-summary-label">총 합계</div>
+        <div class="labor-summary-md">${totalMD.toFixed(1)} M/D</div>
+        <div class="labor-summary-value">${formatNumber(Math.round(totalCost))}원</div>
+      </div>
+    </div>
+    ${categorySummaryHtml}
+  `;
+}
+
+// ============ 전기 자재비 ============
+
+function addMaterial() {
+  projectData.electricalMaterials.push({
+    id: generateId(),
+    category: '',
+    itemName: '',
+    quantity: 0,
+    unitPrice: 0
+  });
+  renderMaterials();
+}
+
+function updateMaterial(id, field, value) {
+  const item = projectData.electricalMaterials.find(m => m.id === id);
+  if (item) {
+    if (['quantity', 'unitPrice'].includes(field)) {
+      item[field] = Number(value) || 0;
+    } else {
+      item[field] = value;
+    }
+    renderMaterials();
+    updateDashboard();
+  }
+}
+
+function removeMaterial(id) {
+  projectData.electricalMaterials = projectData.electricalMaterials.filter(m => m.id !== id);
+  renderMaterials();
+  updateDashboard();
+}
+
+const MATERIAL_CATEGORIES = ['PLC', '감지기', '차단기', '케이블', '단자대', '릴레이', '기타'];
+
+function renderMaterials() {
+  const container = document.getElementById('materialsList');
+
+  if (projectData.electricalMaterials.length === 0) {
+    container.innerHTML = '<p class="empty-message">자재 항목을 추가하세요</p>';
+    return;
+  }
+
+  let totalCost = 0;
+  const rows = projectData.electricalMaterials.map(m => {
+    const subtotal = m.quantity * m.unitPrice;
+    totalCost += subtotal;
+    return `
+      <tr>
+        <td>
+          <select onchange="updateMaterial('${m.id}','category',this.value)">
+            ${MATERIAL_CATEGORIES.map(cat =>
+              `<option value="${cat}" ${m.category === cat ? 'selected' : ''}>${cat}</option>`
+            ).join('')}
+          </select>
+        </td>
+        <td><input type="text" placeholder="품목명" value="${m.itemName || ''}" onchange="updateMaterial('${m.id}','itemName',this.value)"></td>
+        <td class="text-center"><input type="number" value="${m.quantity || 0}" onchange="updateMaterial('${m.id}','quantity',this.value)"></td>
+        <td class="text-center"><input type="number" value="${m.unitPrice || 0}" onchange="updateMaterial('${m.id}','unitPrice',this.value)"></td>
+        <td class="text-right subtotal">${formatNumber(subtotal)}원</td>
+        <td class="text-center"><button class="btn btn-danger" onclick="removeMaterial('${m.id}')">삭제</button></td>
+      </tr>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>분류</th>
+          <th>품목명</th>
+          <th class="text-center">수량</th>
+          <th class="text-center">단가</th>
+          <th class="text-right">소계</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" class="total-label">전기 자재비 합계</td>
+          <td colspan="2" class="total-value">${formatNumber(totalCost)}원</td>
+        </tr>
+      </tfoot>
+    </table>
+  `;
+}
+
+// ============ 외주 가공비 ============
+
+function addOutsourcing() {
+  projectData.outsourcingCosts.push({
+    id: generateId(),
+    vendor: '',
+    description: '',
+    amount: 0
+  });
+  renderOutsourcing();
+}
+
+function updateOutsourcing(id, field, value) {
+  const item = projectData.outsourcingCosts.find(o => o.id === id);
+  if (item) {
+    if (field === 'amount') {
+      item[field] = Number(value) || 0;
+    } else {
+      item[field] = value;
+    }
+    renderOutsourcing();
+    updateDashboard();
+  }
+}
+
+function removeOutsourcing(id) {
+  projectData.outsourcingCosts = projectData.outsourcingCosts.filter(o => o.id !== id);
+  renderOutsourcing();
+  updateDashboard();
+}
+
+function renderOutsourcing() {
+  const container = document.getElementById('outsourcingList');
+
+  if (projectData.outsourcingCosts.length === 0) {
+    container.innerHTML = '<p class="empty-message">외주 항목을 추가하세요</p>';
+    return;
+  }
+
+  let totalCost = 0;
+  const rows = projectData.outsourcingCosts.map(o => {
+    totalCost += o.amount || 0;
+    return `
+      <tr>
+        <td><input type="text" placeholder="업체명" value="${o.vendor || ''}" onchange="updateOutsourcing('${o.id}','vendor',this.value)"></td>
+        <td><input type="text" placeholder="작업내용" value="${o.description || ''}" onchange="updateOutsourcing('${o.id}','description',this.value)"></td>
+        <td class="text-right"><input type="number" value="${o.amount || 0}" onchange="updateOutsourcing('${o.id}','amount',this.value)"></td>
+        <td class="text-center"><button class="btn btn-danger" onclick="removeOutsourcing('${o.id}')">삭제</button></td>
+      </tr>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>업체명</th>
+          <th>내용</th>
+          <th class="text-right">금액</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2" class="total-label">외주 가공비 합계</td>
+          <td colspan="2" class="total-value">${formatNumber(totalCost)}원</td>
+        </tr>
+      </tfoot>
+    </table>
+  `;
+}
+
+// ============ 소모품비 ============
+
+function addConsumable() {
+  projectData.consumableCosts.push({
+    id: generateId(),
+    itemName: '',
+    amount: 0
+  });
+  renderConsumables();
+}
+
+function updateConsumable(id, field, value) {
+  const item = projectData.consumableCosts.find(c => c.id === id);
+  if (item) {
+    if (field === 'amount') {
+      item[field] = Number(value) || 0;
+    } else {
+      item[field] = value;
+    }
+    renderConsumables();
+    updateDashboard();
+  }
+}
+
+function removeConsumable(id) {
+  projectData.consumableCosts = projectData.consumableCosts.filter(c => c.id !== id);
+  renderConsumables();
+  updateDashboard();
+}
+
+function renderConsumables() {
+  const container = document.getElementById('consumablesList');
+
+  if (projectData.consumableCosts.length === 0) {
+    container.innerHTML = '<p class="empty-message">소모품 항목을 추가하세요 (테이프, 튜브, 명판 등)</p>';
+    return;
+  }
+
+  let totalCost = 0;
+  const rows = projectData.consumableCosts.map(c => {
+    totalCost += c.amount || 0;
+    return `
+      <tr>
+        <td><input type="text" placeholder="품목명" value="${c.itemName || ''}" onchange="updateConsumable('${c.id}','itemName',this.value)"></td>
+        <td class="text-right"><input type="number" value="${c.amount || 0}" onchange="updateConsumable('${c.id}','amount',this.value)"></td>
+        <td class="text-center"><button class="btn btn-danger" onclick="removeConsumable('${c.id}')">삭제</button></td>
+      </tr>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>품목명</th>
+          <th class="text-right">금액</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr>
+          <td class="total-label">소모품비 합계</td>
+          <td colspan="2" class="total-value">${formatNumber(totalCost)}원</td>
+        </tr>
+      </tfoot>
+    </table>
+  `;
+}
+
+// ============ 대시보드 ============
+
+function calculateSummary() {
+  const p = projectData.projectInfo;
+  const totalRevenue = p.contractAmount;
+  const originalEstimate = p.originalEstimate;
+  const totalPersonnel = p.totalPersonnel || 0;
+  const estimatedManHours = p.estimatedManHours || 0;
+  const targetMargin = projectData.overheadAndMargin.marginRate || 15;
+
+  // 인건비 계산
+  let laborByCategory = { design: 0, panel: 0, wiring: 0, setup: 0, other: 0 };
+
+  projectData.internalWorkers.forEach(w => {
+    laborByCategory[w.costCategory] += calculateInternalWorkerCost(w);
+  });
+
+  projectData.externalWorkers.forEach(w => {
+    laborByCategory[w.costCategory] += calculateExternalWorkerCost(w);
+  });
+
+  const laborCostTotal = Object.values(laborByCategory).reduce((a, b) => a + b, 0);
+
+  // 기타 비용
+  const electricalMaterialTotal = projectData.electricalMaterials.reduce((sum, m) => sum + m.quantity * m.unitPrice, 0);
+  const travelExpenseTotal = projectData.travelExpense.accommodationCost + projectData.travelExpense.mealCost + projectData.travelExpense.transportCost;
+  const outsourcingCostTotal = projectData.outsourcingCosts.reduce((sum, o) => sum + o.amount, 0);
+  const deliveryCostTotal = projectData.deliveryCost.shippingCost + projectData.deliveryCost.packagingCost;
+  const consumableCostTotal = projectData.consumableCosts.reduce((sum, c) => sum + c.amount, 0);
+
+  const directCostSubtotal = laborCostTotal + electricalMaterialTotal + travelExpenseTotal + outsourcingCostTotal + deliveryCostTotal + consumableCostTotal;
+
+  // 간접비
+  const overheadCost = directCostSubtotal * (projectData.overheadAndMargin.overheadRate / 100);
+  const warrantyReserveCost = totalRevenue * (projectData.overheadAndMargin.warrantyReserveRate / 100);
+  const indirectCostSubtotal = overheadCost + warrantyReserveCost;
+
+  const totalCost = directCostSubtotal + indirectCostSubtotal;
+  const profit = totalRevenue - totalCost;
+  const profitRate = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+  const marginDifference = profitRate - targetMargin;
+
+  // 인당 생산성 지표
+  const revenuePerPerson = totalPersonnel > 0 ? totalRevenue / totalPersonnel : 0;
+  const valueAddedPerPerson = totalPersonnel > 0 ? profit / totalPersonnel : 0;
+  const efficiencyPerManHour = estimatedManHours > 0 ? profit / estimatedManHours : 0;
+
+  // 배분 비교
+  const ba = projectData.budgetAllocation;
+  const budgetTotal = ba.laborDesign + ba.laborPanel + ba.laborWiring + ba.laborSetup + ba.laborOther +
+    ba.electricalMaterial + ba.travelExpense + ba.outsourcingCost + ba.deliveryCost + ba.consumableCost + ba.overhead;
+
+  return {
+    originalEstimate,
+    totalRevenue,
+    laborCostTotal,
+    laborCostByCategory: laborByCategory,
+    laborByCategory,
+    electricalMaterialTotal,
+    travelExpenseTotal,
+    outsourcingCostTotal,
+    deliveryCostTotal,
+    consumableCostTotal,
+    directCostSubtotal,
+    overheadCost,
+    warrantyReserveCost,
+    indirectCostSubtotal,
+    totalCost,
+    profit,
+    profitRate,
+    targetMargin,
+    marginDifference,
+    totalPersonnel,
+    estimatedManHours,
+    revenuePerPerson,
+    valueAddedPerPerson,
+    efficiencyPerManHour,
+    budgetTotal,
+    unallocated: totalRevenue - budgetTotal,
+    budgetAllocation: ba
+  };
+}
+
+function updateDashboard() {
+  const s = calculateSummary();
+  const CATEGORY_LABELS = { design: '설계', panel: '판넬', wiring: '배선', setup: '셋업', other: '기타' };
+
+  // 배분 정보 업데이트
+  document.getElementById('allocationOriginal').textContent = formatNumber(s.originalEstimate);
+  document.getElementById('allocationContract').textContent = formatNumber(s.totalRevenue);
+  document.getElementById('allocationRemaining').textContent = formatNumber(s.unallocated);
+
+  const isProfitable = s.profit >= 0;
+  const isAboveTarget = s.marginDifference >= 0;
+
+  // 견적 vs 계약 비교
+  const negotiationDiff = s.totalRevenue - s.originalEstimate;
+  const negotiationRate = s.originalEstimate > 0 ? (negotiationDiff / s.originalEstimate) * 100 : 0;
+  const isDiscount = negotiationDiff < 0;
+
+  // 비용 항목
+  const costItems = [
+    { label: '인건비 (공수)', value: s.laborCostTotal },
+    { label: '전기 자재비', value: s.electricalMaterialTotal },
+    { label: '출장 경비', value: s.travelExpenseTotal },
+    { label: '외주 가공비', value: s.outsourcingCostTotal },
+    { label: '운반/포장비', value: s.deliveryCostTotal },
+    { label: '소모품비', value: s.consumableCostTotal },
+    { label: '공통 관리비', value: s.overheadCost },
+    { label: '하자보수 예비비', value: s.warrantyReserveCost },
+  ];
+
+  // 인건비 항목별
+  const laborByCategory = Object.entries(s.laborByCategory)
+    .filter(([_, value]) => value > 0)
+    .map(([key, value]) => ({ label: CATEGORY_LABELS[key] || key, value }));
+
+  // 손익 대시보드 HTML
+  let html = '';
+
+  // 견적 vs 계약 비교 섹션
+  if (s.originalEstimate > 0) {
+    html += `
+      <div class="estimate-comparison">
+        <h3>견적 vs 계약 비교</h3>
+        <div class="comparison-grid">
+          <div class="comparison-item">
+            <span class="comparison-label">원가 견적가</span>
+            <span class="comparison-value">${formatNumber(s.originalEstimate)}원</span>
+          </div>
+          <div class="comparison-item">
+            <span class="comparison-label">계약금액</span>
+            <span class="comparison-value">${formatNumber(s.totalRevenue)}원</span>
+          </div>
+          <div class="comparison-item highlight ${isDiscount ? 'discount' : 'increase'}">
+            <span class="comparison-label">${isDiscount ? '네고 할인' : '네고 증액'}</span>
+            <span class="comparison-value">
+              ${isDiscount ? '' : '+'}${formatNumber(negotiationDiff)}원
+              <span class="comparison-rate">(${isDiscount ? '' : '+'}${negotiationRate.toFixed(1)}%)</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // 요약 카드
+  html += `
+    <div class="summary-cards">
+      <div class="card revenue">
+        <div class="card-label">계약금액 (매출)</div>
+        <div class="card-value">${formatNumber(s.totalRevenue)}원</div>
+      </div>
+      <div class="card cost">
+        <div class="card-label">총 비용</div>
+        <div class="card-value">${formatNumber(s.totalCost)}원</div>
+      </div>
+      <div class="card profit ${isProfitable ? 'positive' : 'negative'}">
+        <div class="card-label">${isProfitable ? '이익' : '손실'}</div>
+        <div class="card-value">${isProfitable ? '' : '-'}${formatNumber(Math.abs(s.profit))}원</div>
+        <div class="card-rate">이익률: ${s.profitRate.toFixed(1)}%</div>
+      </div>
+    </div>
+  `;
+
+  // 마진 상태
+  html += `
+    <div class="margin-status ${isAboveTarget ? 'above' : 'below'}">
+      <span class="margin-label">목표 마진율 대비</span>
+      <span class="margin-value">${isAboveTarget ? '+' : ''}${s.marginDifference.toFixed(1)}%p</span>
+      <span class="margin-target">(목표: ${s.targetMargin}%)</span>
+    </div>
+  `;
+
+  // 인당 생산성 지표
+  html += `
+    <div class="productivity-section">
+      <h3>인당 생산성 지표</h3>
+      <div class="productivity-grid">
+        <div class="productivity-item">
+          <span class="productivity-label">투입 인원</span>
+          <span class="productivity-value">${s.totalPersonnel}명</span>
+        </div>
+        <div class="productivity-item">
+          <span class="productivity-label">예상 공수</span>
+          <span class="productivity-value">${formatNumber(s.estimatedManHours)} M/H</span>
+        </div>
+        <div class="productivity-item highlight">
+          <span class="productivity-label">인당 매출액</span>
+          <span class="productivity-value">${s.revenuePerPerson > 0 ? formatNumber(Math.round(s.revenuePerPerson)) : '-'}원</span>
+        </div>
+        <div class="productivity-item highlight">
+          <span class="productivity-label">인당 부가가치</span>
+          <span class="productivity-value">${s.valueAddedPerPerson > 0 ? formatNumber(Math.round(s.valueAddedPerPerson)) : '-'}원</span>
+        </div>
+        <div class="productivity-item highlight">
+          <span class="productivity-label">공수 대비 효율</span>
+          <span class="productivity-value">${s.efficiencyPerManHour > 0 ? formatNumber(Math.round(s.efficiencyPerManHour)) : '-'}원/M/H</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // 비용 상세
+  html += `
+    <div class="cost-breakdown">
+      <h3>비용 상세</h3>
+      ${costItems.map(item => `
+        <div class="breakdown-item">
+          <span class="label">${item.label}</span>
+          <span class="value">${formatNumber(item.value)}원</span>
+          <span class="percent">(${s.totalCost > 0 ? ((item.value / s.totalCost) * 100).toFixed(1) : 0}%)</span>
+        </div>
+      `).join('')}
+      <div class="breakdown-item total">
+        <span class="label">직접비 소계</span>
+        <span class="value">${formatNumber(s.directCostSubtotal)}원</span>
+        <span class="percent"></span>
+      </div>
+    </div>
+  `;
+
+  // 인건비 항목별 내역
+  if (laborByCategory.length > 0) {
+    html += `
+      <div class="cost-breakdown">
+        <h3>인건비 항목별 내역</h3>
+        ${laborByCategory.map(item => `
+          <div class="breakdown-item">
+            <span class="label">${item.label}</span>
+            <span class="value">${formatNumber(item.value)}원</span>
+            <span class="percent">(${s.laborCostTotal > 0 ? ((item.value / s.laborCostTotal) * 100).toFixed(1) : 0}%)</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // 수익 바 차트
+  const costPercent = s.totalRevenue > 0 ? Math.min((s.totalCost / s.totalRevenue) * 100, 100) : 0;
+  html += `
+    <div class="profit-bar">
+      <div class="bar-container">
+        <div class="bar-fill revenue-bar" style="width: 100%">매출</div>
+      </div>
+      <div class="bar-container">
+        <div class="bar-fill cost-bar" style="width: ${costPercent}%">
+          비용 ${s.totalRevenue > 0 ? `(${costPercent.toFixed(1)}%)` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('profitDashboard').innerHTML = html;
+
+  // 비교 대시보드
+  const ba = s.budgetAllocation;
+  const comparisons = [
+    { label: '인건비-설계', budget: ba.laborDesign, actual: s.laborByCategory.design },
+    { label: '인건비-판넬', budget: ba.laborPanel, actual: s.laborByCategory.panel },
+    { label: '인건비-배선', budget: ba.laborWiring, actual: s.laborByCategory.wiring },
+    { label: '인건비-셋업', budget: ba.laborSetup, actual: s.laborByCategory.setup },
+    { label: '인건비-기타', budget: ba.laborOther, actual: s.laborByCategory.other },
+    { label: '전기 자재비', budget: ba.electricalMaterial, actual: s.electricalMaterialTotal },
+    { label: '출장 경비', budget: ba.travelExpense, actual: s.travelExpenseTotal },
+    { label: '외주 가공비', budget: ba.outsourcingCost, actual: s.outsourcingCostTotal },
+    { label: '운반/포장비', budget: ba.deliveryCost, actual: s.deliveryCostTotal },
+    { label: '소모품비', budget: ba.consumableCost, actual: s.consumableCostTotal },
+    { label: '간접비', budget: ba.overhead, actual: s.indirectCostSubtotal },
+  ];
+
+  document.getElementById('comparisonDashboard').innerHTML = `
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>항목</th>
+          <th class="number">배분</th>
+          <th class="number">실제</th>
+          <th class="number">차이</th>
+          <th>상태</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${comparisons.map(c => {
+          const diff = c.budget - c.actual;
+          const rowClass = diff > 0 ? 'under' : diff < 0 ? 'over' : '';
+          const statusClass = diff > 0 ? 'under' : diff < 0 ? 'over' : 'match';
+          const statusText = diff > 0 ? '절감' : diff < 0 ? '초과' : '일치';
+          return `
+            <tr class="${rowClass}">
+              <td>${c.label}</td>
+              <td class="number">${formatNumber(c.budget)}</td>
+              <td class="number">${formatNumber(c.actual)}</td>
+              <td class="number ${diff >= 0 ? 'positive' : 'negative'}">${diff >= 0 ? '+' : ''}${formatNumber(diff)}</td>
+              <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ============ 저장/불러오기 ============
+
+function saveProject() {
+  collectData();
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result.success) {
+        showStatus('저장되었습니다.');
+      } else {
+        showStatus('저장 실패: ' + result.message);
+      }
+    })
+    .withFailureHandler(err => showStatus('오류: ' + err.message))
+    .saveProjectData(projectData);
+}
+
+function loadProject() {
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result.success && result.data) {
+        projectData = { ...initialData, ...result.data };
+        populateForm();
+        updateDashboard();
+        showStatus('불러왔습니다.');
+      } else {
+        updateDashboard();
+      }
+    })
+    .withFailureHandler(err => console.error(err))
+    .loadProjectData();
+}
+
+function resetProject() {
+  if (confirm('모든 데이터를 초기화하시겠습니까?')) {
+    projectData = JSON.parse(JSON.stringify(initialData));
+    populateForm();
+    updateDashboard();
+    showStatus('초기화되었습니다.');
+  }
+}
+
+// ============ 직원 관리 ============
+
+function openEmployeeModal() {
+  document.getElementById('employeeModal').style.display = 'flex';
+  renderEmployeeList();
+}
+
+function closeEmployeeModal() {
+  document.getElementById('employeeModal').style.display = 'none';
+}
+
+function loadEmployees() {
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result.success) {
+        employeeMaster = result.data || [];
+        updateEmployeeSelect();
+        renderEmployeeList();
+      }
+    })
+    .withFailureHandler(err => console.error(err))
+    .loadEmployeeMaster();
+}
+
+function saveEmployees() {
+  google.script.run
+    .withSuccessHandler(() => showStatus('직원 목록 저장됨'))
+    .withFailureHandler(err => showStatus('저장 실패: ' + err.message))
+    .saveEmployeeMaster(employeeMaster);
+}
+
+function addEmployee() {
+  const name = document.getElementById('empName').value;
+  const rank = document.getElementById('empRank').value;
+  const salary = Number(document.getElementById('empSalary').value) || 0;
+  const days = Number(document.getElementById('empDays').value) || 22;
+  const overhead = Number(document.getElementById('empOverhead').value) || 15;
+
+  if (!name) {
+    showStatus('이름을 입력하세요.');
+    return;
+  }
+
+  employeeMaster.push({
+    id: generateId(),
+    personName: name,
+    rank: rank,
+    monthlySalary: salary,
+    workingDaysPerMonth: days,
+    overheadRate: overhead,
+    hoursPerDay: 8
+  });
+
+  document.getElementById('empName').value = '';
+  document.getElementById('empRank').value = '';
+  document.getElementById('empSalary').value = '';
+  document.getElementById('empDays').value = '22';
+  document.getElementById('empOverhead').value = '15';
+
+  saveEmployees();
+  renderEmployeeList();
+  updateEmployeeSelect();
+}
+
+function removeEmployee(id) {
+  employeeMaster = employeeMaster.filter(e => e.id !== id);
+  saveEmployees();
+  renderEmployeeList();
+  updateEmployeeSelect();
+}
+
+function renderEmployeeList() {
+  const container = document.getElementById('employeeList');
+  container.innerHTML = employeeMaster.map(e => `
+    <div class="employee-item">
+      <span>${e.personName}</span>
+      <span>${e.rank}</span>
+      <span>${formatNumber(e.monthlySalary)}원</span>
+      <span>${e.workingDaysPerMonth}일</span>
+      <span>${e.overheadRate}%</span>
+      <button class="btn btn-danger" onclick="removeEmployee('${e.id}')">삭제</button>
+    </div>
+  `).join('');
+}
+
+function updateEmployeeSelect() {
+  const select = document.getElementById('employeeSelect');
+  select.innerHTML = '<option value="">-- 직원 선택 --</option>' +
+    employeeMaster.map(e => `<option value="${e.id}">${e.personName} (${e.rank})</option>`).join('');
+}
+
+// ============ 프로젝트 관리 ============
+
+function openProjectModal() {
+  document.getElementById('projectModal').style.display = 'flex';
+  renderProjectList();
+}
+
+function closeProjectModal() {
+  document.getElementById('projectModal').style.display = 'none';
+}
+
+function loadProjects() {
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result.success) {
+        projectMaster = result.data || [];
+        updateProjectSelect();
+        renderProjectList();
+      }
+    })
+    .withFailureHandler(err => console.error(err))
+    .loadProjectMaster();
+}
+
+function saveProjects() {
+  google.script.run
+    .withSuccessHandler(() => showStatus('프로젝트 목록 저장됨'))
+    .withFailureHandler(err => showStatus('저장 실패: ' + err.message))
+    .saveProjectMaster(projectMaster);
+}
+
+function addProject() {
+  const code = document.getElementById('projCode').value;
+  const name = document.getElementById('projName').value;
+  const date = document.getElementById('projDate').value;
+
+  if (!code) {
+    showStatus('프로젝트 코드를 입력하세요.');
+    return;
+  }
+
+  projectMaster.push({
+    id: generateId(),
+    projectCode: code,
+    projectName: name,
+    contractDate: date
+  });
+
+  document.getElementById('projCode').value = '';
+  document.getElementById('projName').value = '';
+  document.getElementById('projDate').value = '';
+
+  saveProjects();
+  renderProjectList();
+  updateProjectSelect();
+}
+
+function removeProject(id) {
+  projectMaster = projectMaster.filter(p => p.id !== id);
+  saveProjects();
+  renderProjectList();
+  updateProjectSelect();
+}
+
+function renderProjectList() {
+  const container = document.getElementById('projectList');
+  if (!container) return;
+
+  container.innerHTML = projectMaster.map(p => `
+    <div class="project-item">
+      <span class="project-code">${p.projectCode}</span>
+      <span class="project-name">${p.projectName || '-'}</span>
+      <span class="project-date">${p.contractDate || '-'}</span>
+      <button class="btn btn-danger" onclick="removeProject('${p.id}')">삭제</button>
+    </div>
+  `).join('');
+}
+
+function updateProjectSelect() {
+  const selects = document.querySelectorAll('.project-select');
+  const options = '<option value="">-- 프로젝트 선택 --</option>' +
+    projectMaster.map(p => `<option value="${p.projectCode}">${p.projectCode} - ${p.projectName || ''}</option>`).join('');
+
+  selects.forEach(select => {
+    const currentValue = select.value;
+    select.innerHTML = options;
+    select.value = currentValue;
+  });
+}
+
+// ============ 구글시트 연동 ============
+
+function loadFromSheet() {
+  google.script.run
+    .withSuccessHandler(sheets => {
+      const select = document.getElementById('sheetSelect');
+      select.innerHTML = sheets.map(name => `<option value="${name}">${name}</option>`).join('');
+      document.getElementById('sheetModal').style.display = 'flex';
+    })
+    .withFailureHandler(err => showStatus('오류: ' + err.message))
+    .getSheetNames();
+}
+
+function closeSheetModal() {
+  document.getElementById('sheetModal').style.display = 'none';
+}
+
+function confirmLoadFromSheet() {
+  const sheetName = document.getElementById('sheetSelect').value;
+  closeSheetModal();
+
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result.success) {
+        projectData.externalWorkers = result.data || [];
+        renderExternalWorkers();
+        updateDashboard();
+        showStatus(`${result.data.length}명 불러옴`);
+      } else {
+        showStatus('실패: ' + result.message);
+      }
+    })
+    .withFailureHandler(err => showStatus('오류: ' + err.message))
+    .loadExternalWorkersFromSheet(sheetName);
+}
+
+function createSheetTemplate() {
+  google.script.run
+    .withSuccessHandler(result => {
+      showStatus(result.message);
+    })
+    .withFailureHandler(err => showStatus('오류: ' + err.message))
+    .createExternalWorkerTemplate();
+}
+
+// ============ CSV 파일 불러오기 ============
+
+function handleCsvUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const csv = e.target.result;
+      const workers = parseCsv(csv);
+      projectData.externalWorkers = [...projectData.externalWorkers, ...workers];
+      renderExternalWorkers();
+      updateDashboard();
+      showStatus(`${workers.length}명 추가됨`);
+    } catch (err) {
+      showStatus('CSV 파싱 오류: ' + err.message);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+  event.target.value = '';
+}
+
+function parseCsv(csv) {
+  const lines = csv.split('\n').filter(line => line.trim());
+  if (lines.length < 2) return [];
+
+  const workers = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+    if (cols[0]) {
+      workers.push({
+        id: generateId(),
+        personName: cols[0] || '',
+        company: cols[1] || '',
+        rank: cols[2] || '',
+        dailyRate: Number(cols[3]) || 0,
+        projectManDays: Number(cols[4]) || 0,
+        totalManDays: Number(cols[4]) || 0,
+        costCategory: convertCategory(cols[5]),
+        monthlyManDays: [],
+        dailyManDaysPerMonth: []
+      });
+    }
+  }
+  return workers;
+}
+
+function convertCategory(value) {
+  const str = String(value || '').trim();
+  if (str.includes('설계')) return 'design';
+  if (str.includes('판넬')) return 'panel';
+  if (str.includes('배선')) return 'wiring';
+  if (str.includes('셋업') || str.includes('시운전')) return 'setup';
+  return 'other';
+}
+
+// ============ JSON 파일 불러오기/내보내기 ============
+
+function handleJsonUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const json = JSON.parse(e.target.result);
+      loadFromJson(json);
+      showStatus('JSON 파일 불러옴: ' + file.name);
+    } catch (err) {
+      showStatus('JSON 파싱 오류: ' + err.message);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+  event.target.value = '';
+}
+
+function loadFromJson(json) {
+  // 프로젝트 정보
+  projectData.projectInfo = {
+    ...initialData.projectInfo,
+    ...json.projectInfo
+  };
+
+  // 내부/외부 인원 (manHourCost 구조 지원)
+  if (json.manHourCost) {
+    projectData.internalWorkers = json.manHourCost.internalWorkers || [];
+    projectData.externalWorkers = json.manHourCost.externalWorkers || [];
+  } else {
+    projectData.internalWorkers = json.internalWorkers || [];
+    projectData.externalWorkers = json.externalWorkers || [];
+  }
+
+  // 기타 데이터
+  projectData.electricalMaterials = json.electricalMaterials || [];
+  projectData.travelExpense = { ...initialData.travelExpense, ...json.travelExpense };
+  projectData.outsourcingCosts = json.outsourcingCosts || [];
+  projectData.deliveryCost = { ...initialData.deliveryCost, ...json.deliveryCost };
+  projectData.consumableCosts = json.consumableCosts || [];
+  projectData.overheadAndMargin = { ...initialData.overheadAndMargin, ...json.overheadAndMargin };
+  projectData.budgetAllocation = { ...initialData.budgetAllocation, ...json.budgetAllocation };
+
+  // 직원 마스터
+  if (json.employeeMaster && Array.isArray(json.employeeMaster)) {
+    employeeMaster = json.employeeMaster;
+    saveEmployees();
+  }
+
+  populateForm();
+  updateDashboard();
+}
+
+// ============ 다른이름으로 저장 ============
+
+function saveAsExcel() {
+  document.getElementById('saveAsFilename').value = projectData.projectInfo.projectName || '프로젝트';
+  document.getElementById('saveAsModal').style.display = 'flex';
+}
+
+function closeSaveAsModal() {
+  document.getElementById('saveAsModal').style.display = 'none';
+}
+
+function confirmSaveAsExcel() {
+  const filename = document.getElementById('saveAsFilename').value || '프로젝트';
+  closeSaveAsModal();
+
+  collectData();
+  const s = calculateSummary();
+  const CATEGORY_LABELS = { design: '설계', panel: '판넬', wiring: '배선', setup: '셋업', other: '기타' };
+
+  // CSV 형식으로 엑셀 호환 파일 생성 (BOM 포함하여 한글 지원)
+  let csv = '\uFEFF'; // UTF-8 BOM
+
+  // 프로젝트 정보
+  csv += '프로젝트 손익계산서\n\n';
+  csv += '프로젝트명,' + (projectData.projectInfo.projectName || '') + '\n';
+  csv += '고객사,' + (projectData.projectInfo.clientName || '') + '\n';
+  csv += '원가 견적가,' + s.originalEstimate + '\n';
+  csv += '계약금액,' + s.totalRevenue + '\n';
+  csv += '\n';
+
+  // 손익 요약
+  csv += '=== 손익 요약 ===\n';
+  csv += '항목,금액,비율\n';
+  csv += '계약금액 (매출),' + s.totalRevenue + ',100%\n';
+  csv += '총 비용,' + s.totalCost + ',' + (s.totalRevenue > 0 ? ((s.totalCost / s.totalRevenue) * 100).toFixed(1) : 0) + '%\n';
+  csv += '이익,' + s.profit + ',' + s.profitRate.toFixed(1) + '%\n';
+  csv += '\n';
+
+  // 비용 상세
+  csv += '=== 비용 상세 ===\n';
+  csv += '항목,금액,비율\n';
+  csv += '인건비 (공수),' + s.laborCostTotal + ',' + (s.totalCost > 0 ? ((s.laborCostTotal / s.totalCost) * 100).toFixed(1) : 0) + '%\n';
+  csv += '전기 자재비,' + s.electricalMaterialTotal + ',' + (s.totalCost > 0 ? ((s.electricalMaterialTotal / s.totalCost) * 100).toFixed(1) : 0) + '%\n';
+  csv += '출장 경비,' + s.travelExpenseTotal + ',' + (s.totalCost > 0 ? ((s.travelExpenseTotal / s.totalCost) * 100).toFixed(1) : 0) + '%\n';
+  csv += '외주 가공비,' + s.outsourcingCostTotal + ',' + (s.totalCost > 0 ? ((s.outsourcingCostTotal / s.totalCost) * 100).toFixed(1) : 0) + '%\n';
+  csv += '운반/포장비,' + s.deliveryCostTotal + ',' + (s.totalCost > 0 ? ((s.deliveryCostTotal / s.totalCost) * 100).toFixed(1) : 0) + '%\n';
+  csv += '소모품비,' + s.consumableCostTotal + ',' + (s.totalCost > 0 ? ((s.consumableCostTotal / s.totalCost) * 100).toFixed(1) : 0) + '%\n';
+  csv += '공통 관리비,' + s.overheadCost + ',' + (s.totalCost > 0 ? ((s.overheadCost / s.totalCost) * 100).toFixed(1) : 0) + '%\n';
+  csv += '하자보수 예비비,' + s.warrantyReserveCost + ',' + (s.totalCost > 0 ? ((s.warrantyReserveCost / s.totalCost) * 100).toFixed(1) : 0) + '%\n';
+  csv += '직접비 소계,' + s.directCostSubtotal + '\n';
+  csv += '\n';
+
+  // 인건비 항목별
+  csv += '=== 인건비 항목별 ===\n';
+  csv += '항목,금액,비율\n';
+  Object.entries(s.laborByCategory).forEach(([key, value]) => {
+    if (value > 0) {
+      csv += (CATEGORY_LABELS[key] || key) + ',' + value + ',' + (s.laborCostTotal > 0 ? ((value / s.laborCostTotal) * 100).toFixed(1) : 0) + '%\n';
+    }
+  });
+  csv += '\n';
+
+  // 내부 인원
+  if (projectData.internalWorkers.length > 0) {
+    csv += '=== 내부 인원 ===\n';
+    csv += '이름,직급,월급여,투입시간,비용항목,비용\n';
+    projectData.internalWorkers.forEach(w => {
+      const cost = calculateInternalWorkerCost(w);
+      csv += w.personName + ',' + w.rank + ',' + w.monthlySalary + ',' + w.projectHours + ',' + (CATEGORY_LABELS[w.costCategory] || w.costCategory) + ',' + Math.round(cost) + '\n';
+    });
+    csv += '\n';
+  }
+
+  // 외부 인원
+  if (projectData.externalWorkers.length > 0) {
+    csv += '=== 외부 인원 ===\n';
+    csv += '이름,업체명,일당,투입일수,비용항목,비용\n';
+    projectData.externalWorkers.forEach(w => {
+      const cost = calculateExternalWorkerCost(w);
+      csv += w.personName + ',' + (w.company || '') + ',' + w.dailyRate + ',' + w.projectManDays + ',' + (CATEGORY_LABELS[w.costCategory] || w.costCategory) + ',' + Math.round(cost) + '\n';
+    });
+    csv += '\n';
+  }
+
+  // 배분 비교
+  csv += '=== 배분 비교 ===\n';
+  csv += '항목,배분,실제,차이\n';
+  const ba = s.budgetAllocation;
+  const comparisons = [
+    { label: '인건비-설계', budget: ba.laborDesign, actual: s.laborByCategory.design },
+    { label: '인건비-판넬', budget: ba.laborPanel, actual: s.laborByCategory.panel },
+    { label: '인건비-배선', budget: ba.laborWiring, actual: s.laborByCategory.wiring },
+    { label: '인건비-셋업', budget: ba.laborSetup, actual: s.laborByCategory.setup },
+    { label: '인건비-기타', budget: ba.laborOther, actual: s.laborByCategory.other },
+    { label: '전기 자재비', budget: ba.electricalMaterial, actual: s.electricalMaterialTotal },
+    { label: '출장 경비', budget: ba.travelExpense, actual: s.travelExpenseTotal },
+    { label: '외주 가공비', budget: ba.outsourcingCost, actual: s.outsourcingCostTotal },
+    { label: '운반/포장비', budget: ba.deliveryCost, actual: s.deliveryCostTotal },
+    { label: '소모품비', budget: ba.consumableCost, actual: s.consumableCostTotal },
+    { label: '간접비', budget: ba.overhead, actual: s.indirectCostSubtotal },
+  ];
+  comparisons.forEach(c => {
+    csv += c.label + ',' + c.budget + ',' + c.actual + ',' + (c.budget - c.actual) + '\n';
+  });
+
+  // 다운로드
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename + '_손익계산서.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showStatus('저장됨: ' + filename + '_손익계산서.csv');
+}
+
+// ============ 스프레드시트 선택 모달 ============
+
+let selectedSpreadsheetId = '';
+
+function openSpreadsheetModal() {
+  document.getElementById('spreadsheetUrl').value = '';
+  document.getElementById('spreadsheetSheetSelect').innerHTML = '<option value="">-- 먼저 링크를 입력하세요 --</option>';
+  selectedSpreadsheetId = '';
+  document.getElementById('spreadsheetModal').style.display = 'flex';
+}
+
+function closeSpreadsheetModal() {
+  document.getElementById('spreadsheetModal').style.display = 'none';
+}
+
+function extractSpreadsheetId(url) {
+  // https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit...
+  const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return match ? match[1] : null;
+}
+
+function loadSheetsFromUrl() {
+  const url = document.getElementById('spreadsheetUrl').value.trim();
+  if (!url) {
+    showStatus('링크를 입력하세요.');
+    return;
+  }
+
+  const id = extractSpreadsheetId(url);
+  if (!id) {
+    showStatus('유효한 구글 스프레드시트 링크가 아닙니다.');
+    return;
+  }
+
+  selectedSpreadsheetId = id;
+  showStatus('시트 목록 불러오는 중...');
+
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result.success) {
+        const sheets = result.data || [];
+        const sheetSelect = document.getElementById('spreadsheetSheetSelect');
+        sheetSelect.innerHTML = '<option value="">-- 시트 선택 --</option>' +
+          sheets.map(s => `<option value="${s.name}">${s.name} (${s.rowCount}행)</option>`).join('');
+        showStatus('시트 목록 불러옴: ' + sheets.length + '개');
+      } else {
+        showStatus('오류: ' + result.message);
+      }
+    })
+    .withFailureHandler(err => showStatus('오류: ' + err.message))
+    .getSheetsFromSpreadsheet(id);
+}
+
+function confirmLoadFromSpreadsheet() {
+  const sheetName = document.getElementById('spreadsheetSheetSelect').value;
+
+  if (!selectedSpreadsheetId) {
+    showStatus('먼저 링크를 입력하고 시트 목록을 불러오세요.');
+    return;
+  }
+
+  showStatus('프로젝트 데이터 불러오는 중...');
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result.success && result.data) {
+        loadFromJson(result.data);
+        closeSpreadsheetModal();
+        showStatus('프로젝트 데이터 불러옴');
+      } else {
+        showStatus('오류: ' + (result.message || '데이터 없음'));
+      }
+    })
+    .withFailureHandler(err => showStatus('오류: ' + err.message))
+    .loadProjectFromSpreadsheet(selectedSpreadsheetId, sheetName || '프로젝트데이터');
+}
+
+function confirmLoadWorkersFromSpreadsheet() {
+  const sheetName = document.getElementById('spreadsheetSheetSelect').value;
+
+  if (!selectedSpreadsheetId) {
+    showStatus('먼저 링크를 입력하고 시트 목록을 불러오세요.');
+    return;
+  }
+
+  if (!sheetName) {
+    showStatus('시트를 선택하세요.');
+    return;
+  }
+
+  showStatus('외부인원 데이터 불러오는 중...');
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result.success) {
+        projectData.externalWorkers = [...projectData.externalWorkers, ...(result.data || [])];
+        renderExternalWorkers();
+        updateDashboard();
+        closeSpreadsheetModal();
+        showStatus(`${result.data.length}명 추가됨`);
+      } else {
+        showStatus('오류: ' + result.message);
+      }
+    })
+    .withFailureHandler(err => showStatus('오류: ' + err.message))
+    .loadWorkersFromSpreadsheet(selectedSpreadsheetId, sheetName);
+}
+
+// ============ 메인 탭 전환 ============
+
+function switchMainTab(tab) {
+  document.querySelectorAll('.main-tab').forEach(btn => btn.classList.remove('active'));
+  document.getElementById('calculatorTab').style.display = 'none';
+  document.getElementById('attendanceTab').style.display = 'none';
+
+  if (tab === 'calculator') {
+    document.querySelector('.main-tab:first-child').classList.add('active');
+    document.getElementById('calculatorTab').style.display = 'grid';
+    // 손익계산기로 전환 시 출근부 데이터 자동 연동
+    autoSyncAttendanceToWorkers();
+  } else {
+    document.querySelector('.main-tab:last-child').classList.add('active');
+    document.getElementById('attendanceTab').style.display = 'block';
+    initAttendance();
+  }
+}
+
+// ============ 외부인원 출근부 ============
+
+// 출근부 데이터 모델
+let attendanceData = {
+  workers: [], // { id, name, rank, projectCode, dailyRate }
+  records: {}  // { "2026-01-15": ["worker_id1", "worker_id2"] }
+};
+
+let currentAttendanceMonth = new Date().getMonth() + 1;
+let selectedAttendanceDate = null;
+
+function initAttendance() {
+  // 현재 월 설정
+  document.getElementById('attendanceMonth').value = currentAttendanceMonth;
+
+  // 저장된 데이터 로드
+  loadAttendanceData();
+}
+
+// 출근부 인원 추가
+function addAttendanceWorker() {
+  attendanceData.workers.push({
+    id: generateId(),
+    name: '',
+    rank: '',
+    projectCode: '',
+    dailyRate: 0
+  });
+  renderAttendanceWorkers();
+}
+
+// 출근부 인원 수정
+function updateAttendanceWorker(id, field, value) {
+  const worker = attendanceData.workers.find(w => w.id === id);
+  if (worker) {
+    if (field === 'dailyRate') {
+      worker[field] = Number(value) || 0;
+    } else {
+      worker[field] = value;
+    }
+    renderAttendanceWorkers();
+    renderAttendanceCalendar();
+    renderAttendanceSummary();
+  }
+}
+
+// 출근부 인원 삭제
+function removeAttendanceWorker(id) {
+  attendanceData.workers = attendanceData.workers.filter(w => w.id !== id);
+  // 해당 인원의 출근 기록도 삭제
+  Object.keys(attendanceData.records).forEach(date => {
+    attendanceData.records[date] = attendanceData.records[date].filter(wid => wid !== id);
+  });
+  renderAttendanceWorkers();
+  renderAttendanceCalendar();
+  renderAttendanceSummary();
+}
+
+// 출근부 인원 목록 렌더링
+function renderAttendanceWorkers() {
+  const container = document.getElementById('attendanceWorkersList');
+
+  if (attendanceData.workers.length === 0) {
+    container.innerHTML = '<p class="empty-message">외부인원을 추가하세요</p>';
+    return;
+  }
+
+  const projectOptions = '<option value="">-- 선택 --</option>' +
+    projectMaster.map(p => `<option value="${p.projectCode}">${p.projectCode} - ${p.projectName || ''}</option>`).join('');
+
+  const rows = attendanceData.workers.map(w => `
+    <div class="attendance-worker-item">
+      <input type="text" placeholder="이름" value="${w.name || ''}"
+        onchange="updateAttendanceWorker('${w.id}','name',this.value)">
+      <input type="text" placeholder="직급" value="${w.rank || ''}"
+        onchange="updateAttendanceWorker('${w.id}','rank',this.value)">
+      <select class="project-select" onchange="updateAttendanceWorker('${w.id}','projectCode',this.value)">
+        ${projectOptions.replace(`value="${w.projectCode}"`, `value="${w.projectCode}" selected`)}
+      </select>
+      <input type="number" placeholder="일당" value="${w.dailyRate || ''}"
+        onchange="updateAttendanceWorker('${w.id}','dailyRate',this.value)">
+      <button class="btn btn-danger" onclick="removeAttendanceWorker('${w.id}')">삭제</button>
+    </div>
+  `).join('');
+
+  container.innerHTML = `
+    <div class="attendance-worker-header-row">
+      <span>이름</span>
+      <span>직급</span>
+      <span>프로젝트</span>
+      <span>일당</span>
+      <span></span>
+    </div>
+    ${rows}
+  `;
+}
+
+// 달력 렌더링
+function renderAttendanceCalendar() {
+  const month = parseInt(document.getElementById('attendanceMonth').value);
+  currentAttendanceMonth = month;
+  const year = 2026;
+
+  const container = document.getElementById('attendanceCalendar');
+
+  // 해당 월의 첫째 날과 마지막 날
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+  const daysInMonth = lastDay.getDate();
+  const startDayOfWeek = firstDay.getDay();
+
+  // 요일 헤더
+  const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+  let html = '<div class="calendar-grid">';
+  html += weekdays.map((d, i) => `<div class="calendar-header ${i === 0 ? 'sunday' : ''} ${i === 6 ? 'saturday' : ''}">${d}</div>`).join('');
+
+  // 빈 셀 (첫 주 시작 전)
+  for (let i = 0; i < startDayOfWeek; i++) {
+    html += '<div class="calendar-cell empty"></div>';
+  }
+
+  // 날짜 셀
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dayOfWeek = (startDayOfWeek + day - 1) % 7;
+    const isSunday = dayOfWeek === 0;
+    const isSaturday = dayOfWeek === 6;
+
+    // 해당 날짜 출근자
+    const workerIds = attendanceData.records[dateStr] || [];
+    const workerCount = workerIds.length;
+    const workerNames = workerIds
+      .map(id => attendanceData.workers.find(w => w.id === id))
+      .filter(w => w)
+      .map(w => w.name || '?')
+      .slice(0, 3);
+
+    html += `
+      <div class="calendar-cell ${isSunday ? 'sunday' : ''} ${isSaturday ? 'saturday' : ''} ${workerCount > 0 ? 'has-workers' : ''}"
+           onclick="openAttendanceModal('${dateStr}')">
+        <div class="calendar-day">${day}</div>
+        ${workerCount > 0 ? `
+          <div class="calendar-workers">
+            ${workerNames.join(', ')}${workerCount > 3 ? ` 외 ${workerCount - 3}명` : ''}
+          </div>
+          <div class="calendar-count">${workerCount}명</div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  html += '</div>';
+  container.innerHTML = html;
+
+  renderAttendanceSummary();
+}
+
+// 출근자 선택 모달 열기
+function openAttendanceModal(dateStr) {
+  selectedAttendanceDate = dateStr;
+  const [year, month, day] = dateStr.split('-');
+  document.getElementById('attendanceModalTitle').textContent = `${month}월 ${parseInt(day)}일 출근자 선택`;
+
+  const existingWorkerIds = attendanceData.records[dateStr] || [];
+
+  const checkboxes = attendanceData.workers.map(w => {
+    const checked = existingWorkerIds.includes(w.id);
+    return `
+      <label class="attendance-checkbox-item">
+        <input type="checkbox" value="${w.id}" ${checked ? 'checked' : ''}>
+        <span class="worker-info">
+          <strong>${w.name || '(이름없음)'}</strong>
+          <span class="worker-detail">${w.rank || ''} | ${w.projectCode || ''} | ${formatNumber(w.dailyRate)}원</span>
+        </span>
+      </label>
+    `;
+  }).join('');
+
+  if (attendanceData.workers.length === 0) {
+    document.getElementById('attendanceCheckboxList').innerHTML = '<p class="empty-message">먼저 외부인원을 추가하세요</p>';
+  } else {
+    document.getElementById('attendanceCheckboxList').innerHTML = checkboxes;
+  }
+
+  document.getElementById('attendanceModal').style.display = 'flex';
+}
+
+function closeAttendanceModal() {
+  document.getElementById('attendanceModal').style.display = 'none';
+  selectedAttendanceDate = null;
+}
+
+function selectAllAttendance() {
+  document.querySelectorAll('#attendanceCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = true);
+}
+
+function deselectAllAttendance() {
+  document.querySelectorAll('#attendanceCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = false);
+}
+
+function saveAttendanceForDate() {
+  if (!selectedAttendanceDate) return;
+
+  const checkedIds = [];
+  document.querySelectorAll('#attendanceCheckboxList input[type="checkbox"]:checked').forEach(cb => {
+    checkedIds.push(cb.value);
+  });
+
+  if (checkedIds.length > 0) {
+    attendanceData.records[selectedAttendanceDate] = checkedIds;
+  } else {
+    delete attendanceData.records[selectedAttendanceDate];
+  }
+
+  closeAttendanceModal();
+  renderAttendanceCalendar();
+  saveAttendanceData();
+  showStatus('출근 기록 저장됨');
+}
+
+// 월별 집계 렌더링
+function renderAttendanceSummary() {
+  const month = currentAttendanceMonth;
+  const year = 2026;
+  const container = document.getElementById('attendanceSummary');
+
+  // 인원별 투입일수 집계
+  const summary = {};
+  attendanceData.workers.forEach(w => {
+    summary[w.id] = { worker: w, days: 0 };
+  });
+
+  Object.entries(attendanceData.records).forEach(([dateStr, workerIds]) => {
+    const [y, m] = dateStr.split('-').map(Number);
+    if (y === year && m === month) {
+      workerIds.forEach(id => {
+        if (summary[id]) {
+          summary[id].days++;
+        }
+      });
+    }
+  });
+
+  const rows = Object.values(summary)
+    .filter(s => s.worker.name)
+    .map(s => {
+      const subtotal = s.days * (s.worker.dailyRate || 0);
+      return `
+        <tr>
+          <td>${s.worker.name}</td>
+          <td>${s.worker.rank || '-'}</td>
+          <td>${s.worker.projectCode || '-'}</td>
+          <td class="text-right">${formatNumber(s.worker.dailyRate)}원</td>
+          <td class="text-center">${s.days}일</td>
+          <td class="text-right worker-subtotal">${formatNumber(subtotal)}원</td>
+        </tr>
+      `;
+    });
+
+  // 총계
+  const totalDays = Object.values(summary).reduce((sum, s) => sum + s.days, 0);
+  const totalCost = Object.values(summary).reduce((sum, s) => sum + (s.days * (s.worker.dailyRate || 0)), 0);
+
+  if (rows.length === 0) {
+    container.innerHTML = '<p class="empty-message">등록된 출근 기록이 없습니다</p>';
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="worker-table">
+      <thead>
+        <tr>
+          <th>이름</th>
+          <th>직급</th>
+          <th>프로젝트코드</th>
+          <th class="text-right">일당</th>
+          <th class="text-center">투입일수</th>
+          <th class="text-right">소계</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.join('')}
+        <tr class="summary-row">
+          <td colspan="4" style="text-align:right;font-weight:600">${month}월 합계</td>
+          <td class="text-center summary-value">${totalDays}일</td>
+          <td class="text-right summary-value">${formatNumber(totalCost)}원</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+}
+
+// 출근부 데이터 -> 공수표 연동
+function syncAttendanceToWorkers() {
+  if (attendanceData.workers.length === 0) {
+    showStatus('연동할 외부인원이 없습니다');
+    return;
+  }
+
+  doSyncAttendance();
+  showStatus('외부인원 공수표에 반영되었습니다');
+}
+
+// 자동 동기화 (탭 전환 시 호출)
+function autoSyncAttendanceToWorkers() {
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result.success && result.data) {
+        attendanceData = result.data;
+        if (attendanceData.workers.length > 0) {
+          doSyncAttendance();
+        }
+      }
+    })
+    .withFailureHandler(err => console.error(err))
+    .loadAttendanceData();
+}
+
+// 실제 동기화 로직
+function doSyncAttendance() {
+  // 각 인원별 총 투입일수 계산 (전체 월 기준)
+  const workerDays = {};
+  attendanceData.workers.forEach(w => {
+    workerDays[w.id] = 0;
+  });
+
+  Object.values(attendanceData.records).forEach(workerIds => {
+    workerIds.forEach(id => {
+      if (workerDays[id] !== undefined) {
+        workerDays[id]++;
+      }
+    });
+  });
+
+  // 외부인원 공수표에 추가/업데이트
+  attendanceData.workers.forEach(w => {
+    if (!w.name) return;
+
+    const days = workerDays[w.id] || 0;
+
+    // 이미 있는지 확인 (attendanceId로)
+    const existing = projectData.externalWorkers.find(
+      ew => ew.attendanceId === w.id
+    );
+
+    if (existing) {
+      // 업데이트
+      existing.personName = w.name;
+      existing.dailyRate = w.dailyRate;
+      existing.projectManDays = days;
+      existing.rank = w.rank;
+      existing.company = w.projectCode || '';
+    } else if (days > 0) {
+      // 새로 추가 (투입일수가 있는 경우만)
+      projectData.externalWorkers.push({
+        id: generateId(),
+        attendanceId: w.id,
+        personName: w.name,
+        company: w.projectCode || '',
+        rank: w.rank || '',
+        dailyRate: w.dailyRate || 0,
+        projectManDays: days,
+        totalManDays: days,
+        costCategory: 'wiring',
+        monthlyManDays: [],
+        dailyManDaysPerMonth: []
+      });
+    }
+  });
+
+  // 출근부에서 삭제된 인원은 공수표에서도 제거 (attendanceId가 있는 항목만)
+  const attendanceIds = attendanceData.workers.map(w => w.id);
+  projectData.externalWorkers = projectData.externalWorkers.filter(ew => {
+    if (ew.attendanceId) {
+      return attendanceIds.includes(ew.attendanceId);
+    }
+    return true; // attendanceId가 없는 항목은 유지 (수동 추가된 항목)
+  });
+
+  renderExternalWorkers();
+  updateDashboard();
+}
+
+// 출근부 데이터 저장
+function saveAttendanceData() {
+  google.script.run
+    .withSuccessHandler(result => {
+      if (!result.success) {
+        showStatus('저장 실패: ' + result.message);
+      }
+    })
+    .withFailureHandler(err => console.error(err))
+    .saveAttendanceData(attendanceData);
+}
+
+// 출근부 데이터 로드
+function loadAttendanceData() {
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result.success && result.data) {
+        attendanceData = result.data;
+      }
+      renderAttendanceWorkers();
+      renderAttendanceCalendar();
+    })
+    .withFailureHandler(err => console.error(err))
+    .loadAttendanceData();
+}
+</script>

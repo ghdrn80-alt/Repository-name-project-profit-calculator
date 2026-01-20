@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <?!= include('Styles'); ?>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-title">
+        <h1>프로젝트 손익계산기</h1>
+        <span id="statusMessage" class="status-message"></span>
+      </div>
+      <div class="header-actions">
+        <button onclick="openEmployeeModal()" class="btn btn-employee">직원 관리</button>
+        <button onclick="openProjectModal()" class="btn btn-project">프로젝트 관리</button>
+        <button onclick="saveProject()" class="btn btn-primary">저장</button>
+        <button onclick="openSpreadsheetModal()" class="btn btn-primary">시트에서 불러오기</button>
+        <button onclick="saveAsExcel()" class="btn btn-secondary">다른이름으로 저장</button>
+        <button onclick="resetProject()" class="btn btn-secondary">초기화</button>
+      </div>
+    </header>
+
+    <!-- 메인 탭 네비게이션 -->
+    <nav class="main-tabs">
+      <button class="main-tab active" onclick="switchMainTab('calculator')">손익계산기</button>
+      <button class="main-tab" onclick="switchMainTab('attendance')">외부인원 출근부</button>
+    </nav>
+
+    <!-- 손익계산기 탭 -->
+    <main id="calculatorTab" class="main-content">
+      <div class="forms-container">
+        <!-- 프로젝트 정보 -->
+        <section class="form-section">
+          <h2>프로젝트 정보</h2>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>프로젝트명</label>
+              <input type="text" id="projectName" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>고객사</label>
+              <input type="text" id="clientName" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>원가 견적가</label>
+              <input type="number" id="originalEstimate" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>계약금액</label>
+              <input type="number" id="contractAmount" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>총 투입 인원</label>
+              <input type="number" id="totalPersonnel" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>예상 공수 (M/H)</label>
+              <input type="number" id="estimatedManHours" onchange="updateData()">
+            </div>
+          </div>
+        </section>
+
+        <!-- 인원 관리 (탭) -->
+        <section class="form-section" style="border-left-color:#2563eb">
+          <div class="worker-tabs">
+            <button class="worker-tab active" onclick="switchWorkerTab('internal')">
+              내부 인원 (<span id="internalWorkerCount">0</span>명)
+            </button>
+            <button class="worker-tab" onclick="switchWorkerTab('external')">
+              외부 인원 (공수표) (<span id="externalWorkerCount">0</span>명)
+            </button>
+          </div>
+
+          <!-- 내부 인원 탭 -->
+          <div id="internalTab" class="worker-tab-content active">
+            <div class="worker-section-header">
+              <h3>내부 인원 (월급여 기반)</h3>
+              <div class="header-actions">
+                <select id="employeeSelect">
+                  <option value="">직원 선택...</option>
+                </select>
+                <button onclick="addInternalWorker()" class="btn btn-add">+ 추가</button>
+              </div>
+            </div>
+            <div class="worker-help">
+              직원 마스터에서 선택하면 급여 정보가 자동 적용됩니다. 투입시간만 입력하세요.
+            </div>
+            <div id="internalWorkersList"></div>
+          </div>
+
+          <!-- 외부 인원 탭 -->
+          <div id="externalTab" class="worker-tab-content">
+            <div class="worker-section-header">
+              <h3>외부 인원 (일당 기반)</h3>
+              <div class="header-actions">
+                <button onclick="loadFromSheet()" class="btn btn-primary" style="background:#2563eb;color:white">구글시트</button>
+                <input type="file" id="csvFileInput" accept=".csv" onchange="handleCsvUpload(event)" style="display:none">
+                <button onclick="document.getElementById('csvFileInput').click()" class="btn btn-secondary" style="background:#64748b;color:white">CSV</button>
+                <button onclick="addExternalWorker()" class="btn btn-add">+ 추가</button>
+              </div>
+            </div>
+            <div id="externalWorkersList"></div>
+          </div>
+
+          <!-- 공수 인건비 총 합계 -->
+          <div id="laborCostSummary" class="labor-cost-summary"></div>
+        </section>
+
+        <!-- 전기 자재비 -->
+        <section class="form-section">
+          <h2>전기 자재비</h2>
+          <button onclick="addMaterial()" class="btn btn-add">자재 추가</button>
+          <div id="materialsList" class="items-list"></div>
+        </section>
+
+        <!-- 출장 경비 -->
+        <section class="form-section">
+          <h2>출장 경비</h2>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>숙박비</label>
+              <input type="number" id="accommodationCost" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>식비</label>
+              <input type="number" id="mealCost" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>교통비</label>
+              <input type="number" id="transportCost" onchange="updateData()">
+            </div>
+          </div>
+        </section>
+
+        <!-- 외주 가공비 -->
+        <section class="form-section">
+          <h2>외주 가공비</h2>
+          <button onclick="addOutsourcing()" class="btn btn-add">추가</button>
+          <div id="outsourcingList" class="items-list"></div>
+        </section>
+
+        <!-- 운반/포장비 -->
+        <section class="form-section">
+          <h2>운반/포장비</h2>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>운반비</label>
+              <input type="number" id="shippingCost" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>포장비</label>
+              <input type="number" id="packagingCost" onchange="updateData()">
+            </div>
+          </div>
+        </section>
+
+        <!-- 소모품비 -->
+        <section class="form-section">
+          <h2>소모품비</h2>
+          <button onclick="addConsumable()" class="btn btn-add">추가</button>
+          <div id="consumablesList" class="items-list"></div>
+        </section>
+
+        <!-- 간접비 및 마진 -->
+        <section class="form-section">
+          <h2>간접비 및 마진</h2>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>공통 관리비율 (%)</label>
+              <input type="number" id="overheadRate" value="10" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>하자보수 예비비율 (%)</label>
+              <input type="number" id="warrantyReserveRate" value="3" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>목표 마진율 (%)</label>
+              <input type="number" id="marginRate" value="15" onchange="updateData()">
+            </div>
+          </div>
+        </section>
+
+        <!-- 견적 배분 -->
+        <section class="form-section">
+          <h2>견적 배분</h2>
+          <div class="allocation-info">
+            <span>원가 견적가: <strong id="allocationOriginal">0</strong>원</span>
+            <span>계약금액: <strong id="allocationContract">0</strong>원</span>
+            <span>미배분: <strong id="allocationRemaining">0</strong>원</span>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>인건비-설계</label>
+              <input type="number" id="laborDesign" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>인건비-판넬</label>
+              <input type="number" id="laborPanel" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>인건비-배선</label>
+              <input type="number" id="laborWiring" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>인건비-셋업</label>
+              <input type="number" id="laborSetup" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>인건비-기타</label>
+              <input type="number" id="laborOther" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>전기 자재비</label>
+              <input type="number" id="allocElectrical" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>출장 경비</label>
+              <input type="number" id="allocTravel" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>외주 가공비</label>
+              <input type="number" id="allocOutsourcing" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>운반/포장비</label>
+              <input type="number" id="allocDelivery" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>소모품비</label>
+              <input type="number" id="allocConsumable" onchange="updateData()">
+            </div>
+            <div class="form-group">
+              <label>간접비</label>
+              <input type="number" id="allocOverhead" onchange="updateData()">
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 대시보드 -->
+      <div class="dashboard-container">
+        <section class="dashboard profit-dashboard">
+          <h2>손익 현황</h2>
+          <div id="profitDashboard"></div>
+        </section>
+        <section class="dashboard comparison-dashboard">
+          <h2>비용 비교</h2>
+          <div id="comparisonDashboard"></div>
+        </section>
+      </div>
+    </main>
+
+    <!-- 외부인원 출근부 탭 -->
+    <main id="attendanceTab" class="main-content attendance-view" style="display:none">
+      <div class="attendance-container">
+        <!-- 출근부 헤더 -->
+        <section class="form-section">
+          <div class="attendance-header">
+            <h2>2026년 외부인원 출근부</h2>
+            <div class="attendance-controls">
+              <select id="attendanceMonth" onchange="renderAttendanceCalendar()">
+                <option value="1">1월</option>
+                <option value="2">2월</option>
+                <option value="3">3월</option>
+                <option value="4">4월</option>
+                <option value="5">5월</option>
+                <option value="6">6월</option>
+                <option value="7">7월</option>
+                <option value="8">8월</option>
+                <option value="9">9월</option>
+                <option value="10">10월</option>
+                <option value="11">11월</option>
+                <option value="12">12월</option>
+              </select>
+              <button onclick="syncAttendanceToWorkers()" class="btn btn-primary">공수표에 반영</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 외부인원 등록 -->
+        <section class="form-section">
+          <div class="attendance-worker-header">
+            <h3>외부인원 목록</h3>
+            <button onclick="addAttendanceWorker()" class="btn btn-add">+ 인원 추가</button>
+          </div>
+          <div id="attendanceWorkersList" class="attendance-workers-list"></div>
+        </section>
+
+        <!-- 달력 뷰 -->
+        <section class="form-section calendar-section">
+          <h3>월별 출근 달력</h3>
+          <div id="attendanceCalendar" class="attendance-calendar"></div>
+        </section>
+
+        <!-- 월별 집계 -->
+        <section class="form-section">
+          <h3>월별 투입 집계</h3>
+          <div id="attendanceSummary" class="attendance-summary"></div>
+        </section>
+      </div>
+    </main>
+
+    <!-- 직원 관리 모달 -->
+    <div id="employeeModal" class="modal" style="display:none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>직원 관리</h2>
+          <button onclick="closeEmployeeModal()" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="employee-form">
+            <input type="text" id="empName" placeholder="이름">
+            <input type="text" id="empRank" placeholder="직급">
+            <input type="number" id="empSalary" placeholder="월급여">
+            <input type="number" id="empDays" placeholder="월근무일수" value="22">
+            <input type="number" id="empOverhead" placeholder="간접비율(%)" value="15">
+            <button onclick="addEmployee()" class="btn btn-add">추가</button>
+          </div>
+          <div id="employeeList" class="employee-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 프로젝트 관리 모달 -->
+    <div id="projectModal" class="modal" style="display:none">
+      <div class="modal-content">
+        <div class="modal-header" style="background:linear-gradient(135deg,#fef3c7,#fde68a)">
+          <h2 style="color:#92400e">프로젝트 관리</h2>
+          <button onclick="closeProjectModal()" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="project-form">
+            <input type="text" id="projCode" placeholder="프로젝트 코드">
+            <input type="text" id="projName" placeholder="프로젝트명">
+            <input type="date" id="projDate" placeholder="계약일">
+            <button onclick="addProject()" class="btn btn-add">추가</button>
+          </div>
+          <div class="project-list-header">
+            <span>프로젝트코드</span>
+            <span>프로젝트명</span>
+            <span>계약일</span>
+            <span></span>
+          </div>
+          <div id="projectList" class="project-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 시트 선택 모달 (외부 인원용) -->
+    <div id="sheetModal" class="modal" style="display:none">
+      <div class="modal-content modal-small">
+        <div class="modal-header">
+          <h2>시트 선택</h2>
+          <button onclick="closeSheetModal()" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <select id="sheetSelect" style="width:100%;padding:8px;margin-bottom:10px"></select>
+          <button onclick="confirmLoadFromSheet()" class="btn btn-primary">불러오기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 스프레드시트 선택 모달 (프로젝트 데이터용) -->
+    <div id="spreadsheetModal" class="modal" style="display:none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>스프레드시트에서 불러오기</h2>
+          <button onclick="closeSpreadsheetModal()" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom:1rem">
+            <label>구글 스프레드시트 링크</label>
+            <input type="text" id="spreadsheetUrl" style="width:100%;padding:8px" placeholder="https://docs.google.com/spreadsheets/d/...">
+            <button onclick="loadSheetsFromUrl()" class="btn btn-primary" style="margin-top:0.5rem">시트 목록 불러오기</button>
+          </div>
+          <div class="form-group" style="margin-bottom:1rem">
+            <label>시트 선택</label>
+            <select id="spreadsheetSheetSelect" style="width:100%;padding:8px">
+              <option value="">-- 먼저 링크를 입력하세요 --</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+            <button onclick="confirmLoadFromSpreadsheet()" class="btn btn-primary">프로젝트 데이터 불러오기</button>
+            <button onclick="confirmLoadWorkersFromSpreadsheet()" class="btn btn-add">외부인원 불러오기</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 다른이름으로 저장 모달 -->
+    <div id="saveAsModal" class="modal" style="display:none">
+      <div class="modal-content modal-small">
+        <div class="modal-header">
+          <h2>다른이름으로 저장</h2>
+          <button onclick="closeSaveAsModal()" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom:1rem">
+            <label>파일명</label>
+            <input type="text" id="saveAsFilename" style="width:100%;padding:8px" placeholder="프로젝트명">
+          </div>
+          <button onclick="confirmSaveAsExcel()" class="btn btn-primary" style="width:100%">저장 (엑셀/CSV)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 출근자 선택 모달 -->
+    <div id="attendanceModal" class="modal" style="display:none">
+      <div class="modal-content modal-medium">
+        <div class="modal-header" style="background:linear-gradient(135deg,#eff6ff,#dbeafe)">
+          <h2 id="attendanceModalTitle" style="color:#1d4ed8">출근자 선택</h2>
+          <button onclick="closeAttendanceModal()" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="attendanceCheckboxList" class="attendance-checkbox-list"></div>
+          <div style="margin-top:1rem;display:flex;gap:0.5rem">
+            <button onclick="selectAllAttendance()" class="btn btn-secondary" style="flex:1">전체선택</button>
+            <button onclick="deselectAllAttendance()" class="btn btn-secondary" style="flex:1">전체해제</button>
+          </div>
+          <button onclick="saveAttendanceForDate()" class="btn btn-primary" style="width:100%;margin-top:1rem">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <?!= include('JavaScript'); ?>
+</body>
+</html>
