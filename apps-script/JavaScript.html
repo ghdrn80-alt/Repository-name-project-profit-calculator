@@ -1779,6 +1779,9 @@ function removeAttendanceWorker(id) {
   renderAttendanceWorkers();
   renderAttendanceCalendar();
   renderAttendanceSummary();
+  // 손익계산기 외부인원 공수표에서도 삭제
+  doSyncAttendance();
+  saveAttendanceData();
 }
 
 // 외부인원 직급 옵션 생성
