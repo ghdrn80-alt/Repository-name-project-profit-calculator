@@ -388,6 +388,8 @@
             <input type="date" id="projDate" placeholder="계약일">
             <input type="number" id="projEstimate" placeholder="원가 견적가">
             <input type="number" id="projContract" placeholder="계약금액">
+            <input type="number" id="projPersonnel" placeholder="총 투입 인원">
+            <input type="number" id="projManHours" placeholder="예상 공수(M/H)">
             <button onclick="addProject()" class="btn btn-add" style="grid-column: span 2">프로젝트 추가</button>
           </div>
           <div class="project-list-header-extended">
@@ -397,6 +399,8 @@
             <span>계약일</span>
             <span>견적가</span>
             <span>계약금액</span>
+            <span>인원</span>
+            <span>공수</span>
             <span></span>
           </div>
           <div id="projectList" class="project-list"></div>

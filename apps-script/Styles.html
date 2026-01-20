@@ -774,10 +774,10 @@ body {
 
 .project-list-header-extended {
   display: grid;
-  grid-template-columns: 100px 1fr 120px 100px 100px 100px 60px;
+  grid-template-columns: 80px 1fr 100px 85px 85px 85px 45px 50px 50px;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: #64748b;
   text-transform: uppercase;
@@ -787,13 +787,13 @@ body {
 
 .project-item-extended {
   display: grid;
-  grid-template-columns: 100px 1fr 120px 100px 100px 100px 60px;
+  grid-template-columns: 80px 1fr 100px 85px 85px 85px 45px 50px 50px;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   background: #f8fafc;
   border-radius: 8px;
   align-items: center;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   border-left: 4px solid #d97706;
   margin-bottom: 0.5rem;
 }
@@ -813,14 +813,21 @@ body {
 
 .project-item-extended .project-date {
   color: #64748b;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
 
 .project-item-extended .project-estimate,
 .project-item-extended .project-contract {
   text-align: right;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #1e293b;
+}
+
+.project-item-extended .project-personnel,
+.project-item-extended .project-manhours {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #64748b;
 }
 
 /* 프로젝트 정보 섹션 헤더 */

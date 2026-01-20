@@ -345,8 +345,8 @@ function saveProjectMaster(projects) {
 
     if (!sheet) {
       sheet = ss.insertSheet('프로젝트마스터');
-      sheet.getRange('A1:G1').setValues([['ID', '프로젝트코드', '프로젝트명', '고객사', '계약일', '원가견적가', '계약금액']]);
-      sheet.getRange('A1:G1').setFontWeight('bold');
+      sheet.getRange('A1:I1').setValues([['ID', '프로젝트코드', '프로젝트명', '고객사', '계약일', '원가견적가', '계약금액', '총투입인원', '예상공수']]);
+      sheet.getRange('A1:I1').setFontWeight('bold');
     }
 
     // 기존 데이터 삭제 (헤더 제외)
@@ -364,9 +364,11 @@ function saveProjectMaster(projects) {
         proj.clientName || '',
         proj.contractDate,
         proj.originalEstimate || 0,
-        proj.contractAmount || 0
+        proj.contractAmount || 0,
+        proj.totalPersonnel || 0,
+        proj.estimatedManHours || 0
       ]);
-      sheet.getRange(2, 1, rows.length, 7).setValues(rows);
+      sheet.getRange(2, 1, rows.length, 9).setValues(rows);
     }
 
     return { success: true };
@@ -390,7 +392,7 @@ function loadProjectMaster() {
       return { success: true, data: [] };
     }
 
-    const data = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
+    const data = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
     const projects = data.map(row => {
       // 날짜 처리: Date 객체인 경우 문자열로 변환
       let dateStr = '';
@@ -408,7 +410,9 @@ function loadProjectMaster() {
         clientName: String(row[3] || ''),
         contractDate: dateStr,
         originalEstimate: Number(row[5]) || 0,
-        contractAmount: Number(row[6]) || 0
+        contractAmount: Number(row[6]) || 0,
+        totalPersonnel: Number(row[7]) || 0,
+        estimatedManHours: Number(row[8]) || 0
       };
     });
 
