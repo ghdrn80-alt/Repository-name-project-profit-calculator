@@ -391,15 +391,26 @@ function loadProjectMaster() {
     }
 
     const data = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
-    const projects = data.map(row => ({
-      id: row[0] || generateId(),
-      projectCode: row[1] || '',
-      projectName: row[2] || '',
-      clientName: row[3] || '',
-      contractDate: row[4] || '',
-      originalEstimate: Number(row[5]) || 0,
-      contractAmount: Number(row[6]) || 0
-    }));
+    const projects = data.map(row => {
+      // 날짜 처리: Date 객체인 경우 문자열로 변환
+      let dateStr = '';
+      if (row[4]) {
+        if (row[4] instanceof Date) {
+          dateStr = Utilities.formatDate(row[4], Session.getScriptTimeZone(), 'yyyy-MM-dd');
+        } else {
+          dateStr = String(row[4]);
+        }
+      }
+      return {
+        id: row[0] || generateId(),
+        projectCode: String(row[1] || ''),
+        projectName: String(row[2] || ''),
+        clientName: String(row[3] || ''),
+        contractDate: dateStr,
+        originalEstimate: Number(row[5]) || 0,
+        contractAmount: Number(row[6]) || 0
+      };
+    });
 
     return { success: true, data: projects };
   } catch (e) {
